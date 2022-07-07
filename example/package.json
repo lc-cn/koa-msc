@@ -1,21 +1,18 @@
 {
-  "name": "koa-msc",
-  "private": true,
+  "name": "koa-msc-example",
   "version": "1.0.0",
-  "description": "一个使用装饰器开发后端API的框架",
+  "description": "koa-msc 使用样例",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
-    "dev": "npm run dev -w example",
+    "dev": "ts-node-dev -r tsconfig-paths/register ./src/index.ts",
     "pub": "npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "workspaces": [
-    "example"
-  ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/liucl-cn/koa-msc.git"
+    "url": "git+https://github.com/liucl-cn/koa-msc.git",
+    "directory": "example"
   },
   "keywords": [
     "ts",
@@ -44,12 +41,7 @@
     "/lib/**/LICENSE"
   ],
   "dependencies": {
-    "@koa/router": "^10.1.1",
-    "koa": "^2.13.4",
-    "koa-bodyparser": "^4.3.0",
-    "log4js": "^6.5.2",
-    "mysql2": "^2.3.3",
-    "sequelize": "^6.21.2",
-    "ws": "^8.8.0"
+    "koa-msc": "^1.0.0",
+    "sequelize": "^6.21.2"
   }
 }
