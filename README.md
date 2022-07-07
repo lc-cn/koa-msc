@@ -4,6 +4,10 @@
 <p>
 基于koa+sequelize+mysql，使用装饰器+typescript的一个NodeJS后端开发框架
 </p>
+<p>
+
+[样例](/example)
+</p>
 
 [![node engine](https://img.shields.io/node/v/oitq?color=339933&style=flat-square&labelColor=FAFAFA&logo=Node.js)](https://nodejs.org)
 [![dm](https://shields.io/npm/dm/koa-msc)](https://www.npmjs.com/package/koa-msc)
