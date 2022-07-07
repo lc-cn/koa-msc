@@ -1,6 +1,6 @@
 <div align="center">
 
-# koa
+# koa-msc
 <p>
 基于koa+sequelize+mysql，使用装饰器+typescript的一个NodeJS后端开发框架
 </p>
