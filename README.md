@@ -1,5 +1,15 @@
+<div align="center">
+
 # koa
+<p>
 基于koa+sequelize+mysql，使用装饰器+typescript的一个NodeJS后端开发框架
+</p>
+
+[![node engine](https://img.shields.io/node/v/oitq?color=339933&style=flat-square&labelColor=FAFAFA&logo=Node.js)](https://nodejs.org)
+[![dm](https://shields.io/npm/dm/koa-msc)](https://www.npmjs.com/package/koa-msc)
+
+</div>
+
 # 使用示例
 ## 1.初始化项目
 1. [点击这里](https://github.com/l-collect/ts-dev-template/generate) 根据[ts-dev-template](https://github.com/l-collect/ts-dev-template) 模板仓库创建一个你自己的ts项目(需要你有github账号并能正常访问github官网)
