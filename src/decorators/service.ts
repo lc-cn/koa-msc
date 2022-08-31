@@ -1,4 +1,4 @@
-import {services} from "../service";
+import {services} from "@/service";
 import {set} from "./";
 export function Service(target)
 export function Service(name?:string)

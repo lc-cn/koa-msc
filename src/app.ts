@@ -1,7 +1,8 @@
 import Koa from 'koa'
 import * as path from "path";
-import {Server as HttpServer} from 'http'
+import {createServer, Server} from 'http'
 import KoaBodyParser from "koa-bodyparser";
+import Schema from 'async-validator'
 import * as fs from 'fs'
 import {Class, deepClone, deepMerge} from "./utils";
 import {Logger,getLogger} from "log4js";
@@ -9,8 +10,9 @@ import {models} from "./model";
 import {services} from "./service";
 import {controllers} from "./controller";
 import {Model,Options as DataBaseConfig,Sequelize} from "sequelize";
-import {Router} from "./router";
+import {Router,RouterOptions} from "./router";
 import {MethodConfig, RouteConfig} from "./decorators";
+import {ListenOptions} from "net";
 
 export class App extends Koa{
     public config:App.Config
@@ -19,12 +21,13 @@ export class App extends Koa{
     public services:Record<string, Class>={}
     public controllers:Record<string,Class>={}
     public router:Router
-    public httpServer:HttpServer
+    public httpServer:Server
     public sequelize:Sequelize
     constructor(config:App.Config) {
         super(config.koa)
+        this.httpServer=createServer(this.callback())
         this.config=deepMerge(deepClone(App.defaultConfig) as App.Config,config)
-        this.router=new Router(this.config.router)
+        this.router=new Router(this.httpServer,this.config.router)
         this.logger=this.getLogger('[app]')
         this.logger.info('正在初始化...')
         this.init()
@@ -46,7 +49,8 @@ export class App extends Koa{
     }
     initModels(){
         this.logger.info('正在扫描并创建Models')
-        for(const [M] of this.load(this.config.model_path,"models")){
+        const modules=this.load(this.config.model_path,"models")
+        for(const [M] of modules){
             const name=M.name.replace('Model','')
             // @ts-ignore
             this.models[name]=Model.init(M,{sequelize:this.sequelize,modelName:name})
@@ -71,7 +75,14 @@ export class App extends Koa{
                     const path=routeConfig.path.split('/').concat(methodConfig.path.split('/')).filter(Boolean)
                         .join('/')
                     this.router[method.toLowerCase()]('/'+path,async (ctx)=>{
-                        const result=await this.controllers[name][methodConfig.name](ctx)
+                        const params={...ctx.query,...ctx.request.params,...ctx.request.body}
+                        if(methodConfig.rules){
+                            const schema=new Schema(methodConfig.rules)
+                            let err=null
+                            await schema.validate(params).catch(e=>err=e)
+                            if(err) throw err
+                        }
+                        const result=await this.controllers[name][methodConfig.name](...[Object.keys(params).length?params:null,ctx].filter(Boolean))
                         if(result) ctx.body=result
                     })
                 }
@@ -103,6 +114,19 @@ export class App extends Koa{
         const logger:Logger=getLogger(category)
         logger.level=this.config.log_level
         return logger
+    }
+    listen(port?: number, hostname?: string, backlog?: number, listeningListener?: () => void): Server
+    listen(port: number, hostname?: string, listeningListener?: () => void): Server
+    listen(port: number, backlog?: number, listeningListener?: () => void): Server
+    listen(port: number, listeningListener?: () => void): Server
+    listen(path: string, backlog?: number, listeningListener?: () => void): Server
+    listen(path: string, listeningListener?: () => void): Server
+    listen(options: ListenOptions, listeningListener?: () => void): Server
+    listen(handle: any, backlog?: number, listeningListener?: () => void): Server
+    listen(handle: any, listeningListener?: () => void): Server
+    listen(...params:any[]){
+        this.httpServer.listen(...params)
+        return this.httpServer
     }
     async start(port:number){
         this.logger.info('正在同步数据库Models')
@@ -139,7 +163,7 @@ export namespace App{
         service_path?:string
         model_path?:string
         koa?:KoaOptions
-        router?:Router.Options
+        router?:RouterOptions
         sequelize:DataBaseConfig
     }
 }

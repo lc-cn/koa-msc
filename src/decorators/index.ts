@@ -1,4 +1,4 @@
-import {Class} from "../utils";
+import {Class} from "@/utils";
 export * from './controller'
 export * from './model'
 export * from './service'
