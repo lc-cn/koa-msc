@@ -44,6 +44,11 @@ export function deepClone<T extends any>(obj:T):T {
 export interface Class{
     new(...args:any[]):any
 }
+export function toLowercaseFirst(str){
+    if(!str) return str
+    if(typeof str!=='string') return str
+    return str[0].toLowerCase()+str.slice(1)
+}
 export function Mixin(base:Class,...classes:Class[]){
     classes.forEach(ctr => {
         Object.getOwnPropertyNames(ctr.prototype).forEach(name => {

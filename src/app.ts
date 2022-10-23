@@ -4,9 +4,9 @@ import {createServer, Server} from 'http'
 import KoaBodyParser from "koa-bodyparser";
 import Schema, {Rules} from 'async-validator'
 import * as fs from 'fs'
-import {Class, deepClone, deepMerge} from "./utils";
+import {Class, deepClone, deepMerge, toLowercaseFirst} from "./utils";
 import {Logger,getLogger} from "log4js";
-import {models, Relation, Table, TableDecl} from "./model";
+import {tables, Model} from "./model";
 import {services} from "./service";
 import {controllers} from "./controller";
 export function getIpAddress(){
@@ -27,7 +27,7 @@ import {
     Sequelize
 } from "sequelize";
 import {Router,RouterOptions} from "./router";
-import {MethodConfig, Request, RouteConfig} from "./decorators";
+import {ColumnConfig, columnsKey, MethodConfig, Relations, relationsKey, Request, RouteConfig} from "./decorators";
 import {ListenOptions} from "net";
 import {networkInterfaces} from "os";
 
@@ -36,7 +36,7 @@ export class App extends Koa{
     public logger:Logger
     public services:Record<string, any>={}
     public controllers:Record<string,Class>={}
-    private tableConfig: Record<string, App.TableConfig> = {}
+    private tableConfig: Record<string, ColumnConfig> = {}
     public router:Router
     public httpServer:Server
     public sequelize:Sequelize
@@ -62,18 +62,15 @@ export class App extends Koa{
         this.initServices()
         this.initControllers()
     }
-    extend(name: string, config: App.TableConfig) {
+    extend(name: string, config: ColumnConfig) {
         if (!this.tableConfig[name]) return this.define(name, config)
         Object.assign(this.tableConfig[name], config)
         return this
     }
 
-    define(name: string, config:App.TableConfig) {
+    define(name: string, config:ColumnConfig) {
         if(this.tableConfig[name]) return this.extend(name,config)
-        this.tableConfig[name]={
-            relations:config.relations,
-            tableDesc:config.tableDesc
-        }
+        this.tableConfig[name]=config
         return this
     }
     createDataBasePool(){
@@ -90,10 +87,7 @@ export class App extends Koa{
         this.logger.info('正在扫描并创建Models')
         const tableConfigs=this.load(this.config.model_path,"models")
         for(const [name,Table] of tableConfigs){
-            this.define(name.replace('Model',''),{
-                relations:Table.relations,
-                tableDesc:new Table()
-            })
+            this.define(toLowercaseFirst(name.replace('Model','')),Reflect.get(Table,columnsKey))
         }
     }
     before(event:string,listener:(...args:any[])=>any){
@@ -164,7 +158,7 @@ export class App extends Koa{
             case "services":
                 return services
             case "models":
-                return models
+                return tables
             case "controllers":
                 return controllers
             default:
@@ -196,21 +190,26 @@ export class App extends Koa{
     async start(port:number){
         // 通过sequelize定义模型
         Object.entries(this.tableConfig).forEach(([name, config]) => {
-            this.sequelize.define(name, config.tableDesc,{timestamps:false})
+            this.sequelize.define(name, config,{timestamps:false})
         })
         // 根据表关系配置生成模型关系
-        Object.entries(this.tableConfig).forEach(([name,config])=>{
-            for(const relation of config.relations.hasOne){
-                this.model(name).hasOne(this.model(relation.model),relation.options)
+        tables.forEach((table,name)=>{
+            const relations:Relations=Reflect.get(table.prototype.constructor,relationsKey)
+            for(const relation of relations.hasOne){
+                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                this.model(name).hasOne(this.model(targetName),relation.options)
             }
-            for(const relation of config.relations.belongsTo){
-                this.model(name).belongsTo(this.model(relation.model),relation.options)
+            for(const relation of relations.hasMany){
+                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                this.model(name).hasMany(this.model(targetName),relation.options)
             }
-            for(const relation of config.relations.hasMany){
-                this.model(name).hasMany(this.model(relation.model),relation.options)
+            for(const relation of relations.belongsTo){
+                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                this.model(name).belongsTo(this.model(targetName),relation.options)
             }
-            for(const relation of config.relations.belongsToMany){
-                this.model(name).belongsToMany(this.model(relation.model),relation.options)
+            for(const relation of relations.belongsToMany){
+                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                this.model(name).belongsToMany(this.model(targetName),relation.options)
             }
         })
         this.logger.info('正在同步数据库Models')
@@ -240,10 +239,6 @@ export namespace App{
         proxyIpHeader?: string
         maxIpsCount?: number
     }
-    export interface TableConfig{
-        tableDesc:TableDecl
-        relations:Relation
-    }
     export const defaultConfig:Partial<Config>={
         controller_path:'controllers',
         model_path:'models',
@@ -260,7 +255,7 @@ export namespace App{
     }
     interface ResultMap{
         controllers:Class
-        models:Table
+        models:Model
         services:Class
     }
     export type LoadResult<T extends keyof ResultMap>=ResultMap[T]

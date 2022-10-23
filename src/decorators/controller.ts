@@ -1,12 +1,12 @@
 import {controllers} from '@/controller'
 import {Rule, Rules} from 'async-validator'
-import {deepClone, deepMerge} from "@/utils";
+import {deepClone, deepMerge, toLowercaseFirst} from "@/utils";
 export function Controller(path:string,name?:string){
     return (target)=>{
-        name=name||target.name.replace('Controller','')
+        name=name||toLowercaseFirst(target.name.replace('Controller',''))
         target.prototype.__ROUTE__={
             path,
-            name:name||target.name.replace('Controller','')
+            name:name||toLowercaseFirst(target.name.replace('Controller',''))
         }
         target.prototype.__METHODS__=methodsMap.get(target.prototype.constructor)
         controllers.set(name,target)

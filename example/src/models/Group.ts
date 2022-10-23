@@ -1,12 +1,14 @@
-import {Model} from "koa-msc";
+import {Column, Table, Model, HasMany} from "koa-msc";
 import {DataTypes} from "sequelize";
-import {Table} from "koa-msc";
-@Model
-export class GroupModel extends Table{
-    groupName=DataTypes.STRING
+import {User} from "@/models/User";
+@Table
+@HasMany(()=>User)
+export class Group extends Model{
+    @Column(DataTypes.STRING)
+    name:string
 }
-export interface UserInfo{
+export interface GroupInfo{
     id:number
-    userName?:string
-    age?:number
+    name?:string
 }
+
