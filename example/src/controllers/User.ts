@@ -5,6 +5,7 @@ import {UserInfo} from '@/models/User'
 @Controller('/user')
 export class UserController{
     constructor(public service:UserService,public services) {
+
     }
     @RequestMapping('list',Request.get)
     async hello(ctx){
@@ -23,6 +24,11 @@ export class UserController{
     async edit(params){
         const {id,...other}=params
         return await this.service.edit({id},other)
+    }
+    @Param('id',{type:'number',required:true})
+    @RequestMapping('/info',Request.post)
+    async info({id}){
+        return await this.service.info({id})
     }
     @RequestMapping('/remove',Request.get)
     @Param('id',{type:'number',transform:(value)=>Number(value)})

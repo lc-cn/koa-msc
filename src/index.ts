@@ -1,4 +1,7 @@
 export * from './app'
 export * from './router'
+export * from './controller'
+export * from './model'
+export * from './service'
 export * from './utils'
 export * from './decorators'
