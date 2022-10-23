@@ -8,14 +8,14 @@ const app=new App({
         prefix:'/api'
     },
     sequelize:{
-        host:'148.70.201.93',
+        host:'******',
         database:'koa_test',
         logging(sql){
             app.logger.info(sql)
         },
         dialect:'mysql',
         username:'root',
-        password:'l196023.'
+        password:'*****'
     }
 })
 
