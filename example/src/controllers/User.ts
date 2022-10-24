@@ -1,10 +1,10 @@
-import {Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
+import {App, Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserService} from "@/services/User";
 import {UserInfo} from '@/models/User'
 
 @Controller('/user')
 export class UserController{
-    constructor(public service:UserService,public services) {
+    constructor(public app:App,public service:UserService,public services) {
 
     }
     @RequestMapping('list',Request.get)

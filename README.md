@@ -101,14 +101,17 @@ export class UserService {
 3. src/models/User.ts
 
 ```typescript
-import {Model} from 'koa-msc'
+import {Column, Model} from 'koa-msc'
 import {DataTypes} from "sequelize";
 
 @Model
 class UserModel {
-    static user_id:DataTypes.STRING
-    static name:DataTypes.STRING
-    static age:DataTypes.INTEGER
+    @Column(DataTypes.STRING)
+    user_id: string
+    @Column(DataTypes.STRING)
+    name: string
+    @Column(DataTypes.INTEGER)
+    age: number
 }
 ```
 ## 6. 配置启动命令(若为模板仓库创建并未做修改，可跳过)

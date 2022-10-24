@@ -1,10 +1,10 @@
-import {Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
+import {App, Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserInfo} from '@/models/User'
 import {GroupService} from "@/services/Group";
 
 @Controller('/group')
 export class GroupController{
-    constructor(public service:GroupService,public services) {
+    constructor(public app:App,public service:GroupService,public services) {
 
     }
     @RequestMapping('list',Request.get)

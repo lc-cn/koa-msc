@@ -142,7 +142,7 @@ export class App extends Koa{
     initControllers(){
         this.logger.info('正在扫描并创建Controllers')
         for(const [name,Controller] of this.load(this.config.controller_path,'controllers')){
-            this.addController(name.replace('Controller',''),new Controller(this.service(name),this.services))
+            this.addController(name.replace('Controller',''),new Controller(this,this.service(name),this.services))
         }
     }
     load<T extends 'controllers'|'services'|'models'>(dir,type:T):Map<string,App.LoadResult<T>>{
@@ -193,8 +193,9 @@ export class App extends Koa{
             this.sequelize.define(name, config,{timestamps:false})
         })
         // 根据表关系配置生成模型关系
-        tables.forEach((table,name)=>{
+        for(const [name,table] of tables){
             const relations:Relations=Reflect.get(table.prototype.constructor,relationsKey)
+            if(!relations) continue
             for(const relation of relations.hasOne){
                 const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
                 this.model(name).hasOne(this.model(targetName),relation.options)
@@ -211,7 +212,7 @@ export class App extends Koa{
                 const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
                 this.model(name).belongsToMany(this.model(targetName),relation.options)
             }
-        })
+        }
         this.logger.info('正在同步数据库Models')
         await this.sequelize.sync({alter:true}).catch(e=>{
             this.logger.error(e)
