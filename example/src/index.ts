@@ -8,14 +8,14 @@ const app=new App({
         prefix:'/api'
     },
     sequelize:{
-        host:'******',
+        host:'148.70.201.93',
         database:'koa_test',
         logging(sql){
-            app.logger.info(sql)
+            app.logger.debug(sql)
         },
         dialect:'mysql',
         username:'root',
-        password:'*****'
+        password:'l196023.'
     }
 })
 
@@ -40,6 +40,7 @@ app.use(async (ctx,next)=>{
     }
 })
 app.router.ws('/test').on('connection',(socket)=>{
+
     socket.send('你好呀')
     socket.on('message',(data,isBinary)=>{
         if(!isBinary){
@@ -47,4 +48,4 @@ app.router.ws('/test').on('connection',(socket)=>{
         }
     })
 })
-app.start(8080)
+app.start(8089)

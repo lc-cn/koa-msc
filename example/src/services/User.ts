@@ -1,15 +1,19 @@
-import {Service} from "koa-msc";
-import {Model,ModelStatic} from "sequelize";
+import {Serve, Service} from "koa-msc";
 import {UserInfo} from "@/models/User";
+import {Transaction} from "sequelize";
 @Service
-export class UserService{
-    public model:ModelStatic<Model<UserInfo>>
-    public models
-    constructor() {
-    }
+export class UserService extends Serve<UserInfo>{
     async getUserList(){
+        const t=await this.transaction()
         return await this.model.findAll({
-            include:this.models.group
+            include:this.models.group,
+            transaction:t
+        })
+        return this.transaction(async (t:Transaction)=>{
+            return await this.model.findAll({
+                include:this.models.group,
+                transaction:t
+            })
         })
     }
     async add(params){

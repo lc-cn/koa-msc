@@ -1,14 +1,28 @@
-import Koa from 'koa'
+import Koa, {Context} from 'koa'
 import * as path from "path";
 import {createServer, Server} from 'http'
 import KoaBodyParser from "koa-bodyparser";
 import Schema, {Rules} from 'async-validator'
 import * as fs from 'fs'
-import {Class, deepClone, deepMerge, toLowercaseFirst} from "./utils";
 import {Logger,getLogger} from "log4js";
-import {tables, Model} from "./model";
-import {services} from "./service";
-import {controllers} from "./controller";
+import {ModelAttributes, Options as DataBaseConfig, Sequelize} from "sequelize";
+import {ListenOptions} from "net";
+import {networkInterfaces} from "os";
+import {Class, deepClone, deepMerge, toLowercaseFirst} from "./utils";
+import {
+    ColumnsConfig,
+    columnsKey,
+    MethodConfig,
+    Relations,
+    relationsKey,
+    Request,
+    RouteConfig
+} from "./decorators";
+import {Router,RouterOptions} from "./router";
+import {models, BaseModel} from "./model";
+import {BaseService, ServiceConstruct, services} from "./service";
+import {ControllerConstruct, controllers} from "./controller";
+import {SequelizeHooks} from "sequelize/types/hooks";
 export function getIpAddress(){
     const interfaces=networkInterfaces()
     const ips:string[]=[]
@@ -22,21 +36,13 @@ export function getIpAddress(){
     if(!ips.length)ips.push('127.0.0.1')
     return ips
 }
-import {
-    Options as DataBaseConfig,
-    Sequelize
-} from "sequelize";
-import {Router,RouterOptions} from "./router";
-import {ColumnConfig, columnsKey, MethodConfig, Relations, relationsKey, Request, RouteConfig} from "./decorators";
-import {ListenOptions} from "net";
-import {networkInterfaces} from "os";
 
 export class App extends Koa{
     public config:App.Config
     public logger:Logger
-    public services:Record<string, any>={}
+    public services:Record<string, BaseService>={}
     public controllers:Record<string,Class>={}
-    private tableConfig: Record<string, ColumnConfig> = {}
+    private tableConfig: Record<string, ColumnsConfig> = {}
     public router:Router
     public httpServer:Server
     public sequelize:Sequelize
@@ -62,13 +68,13 @@ export class App extends Koa{
         this.initServices()
         this.initControllers()
     }
-    extend(name: string, config: ColumnConfig) {
+    extend(name: string, config: ColumnsConfig) {
         if (!this.tableConfig[name]) return this.define(name, config)
         Object.assign(this.tableConfig[name], config)
         return this
     }
 
-    define(name: string, config:ColumnConfig) {
+    define(name: string, config:ColumnsConfig) {
         if(this.tableConfig[name]) return this.extend(name,config)
         this.tableConfig[name]=config
         return this
@@ -76,6 +82,26 @@ export class App extends Koa{
     createDataBasePool(){
         this.logger.info('正在创建数据库连接...')
         this.sequelize=new Sequelize(this.config.sequelize)
+    }
+    addHook<K extends keyof SequelizeHooks>(type:K,name:string,fn:SequelizeHooks[K])
+    addHook<K extends keyof SequelizeHooks>(type:K,fn:SequelizeHooks[K])
+    addHook<K extends keyof SequelizeHooks>(type:K,...args:[string,SequelizeHooks[K]]|[SequelizeHooks[K]]){
+        const [name,fn]=args
+        if(typeof name!=="string") {
+            this.sequelize.addHook(type,name)
+        }else{
+            this.sequelize.addHook(type,name,fn)
+        }
+        return this
+    }
+    removeHook<K extends keyof SequelizeHooks>(type:K,name:string){
+        this.sequelize.removeHook(type,name)
+    }
+    hasHook<K extends keyof SequelizeHooks>(type:K){
+        return this.sequelize.hasHook(type)
+    }
+    hasHooks<K extends keyof SequelizeHooks>(type:K){
+        return this.sequelize.hasHooks(type)
     }
     get models(){
         return this.sequelize.models
@@ -96,8 +122,9 @@ export class App extends Koa{
     service(name:string){
         return this.services[name]
     }
-    addService(name:string,service){
+    addService(name:string,service:BaseService){
         name=name.replace('Service','')
+        service.sequelize=this.sequelize
         this.services[name]=service
     }
     initServices(){
@@ -122,18 +149,24 @@ export class App extends Koa{
                 tags:methodConfig.tags||[],
                 path,
                 methods:methodConfig.method,
-                rules:methodConfig.rules||{}
+                query:methodConfig.query||{},
+                body:methodConfig.body||{}
             })
             for(const method of methodConfig.method){
-                this.router[method.toLowerCase()]('/'+path,async (ctx)=>{
-                    const params={...ctx.query,...ctx.request.params,...ctx.request.body}
-                    if(methodConfig.rules){
-                        const schema=new Schema(methodConfig.rules)
+                this.router[method.toLowerCase()]('/'+path,async (ctx:Context)=>{
+                    if(methodConfig.query){
+                        const schema=new Schema(methodConfig.query)
                         let err=null
-                        await schema.validate(params).catch(e=>err=e)
+                        await schema.validate(ctx.request.query||{}).catch(e=>err=e)
                         if(err) throw err
                     }
-                    const result=await this.controllers[name as string][methodConfig.name](...[Object.keys(params).length?params:null,ctx].filter(Boolean))
+                    if(methodConfig.body){
+                        const schema=new Schema(methodConfig.body)
+                        let err=null
+                        await schema.validate(ctx.request['body']||{}).catch(e=>err=e)
+                        if(err) throw err
+                    }
+                    const result=await this.controllers[name as string][methodConfig.name](ctx.request.query,ctx.request['body'],ctx)
                     if(result) ctx.body=result
                 })
             }
@@ -145,7 +178,7 @@ export class App extends Koa{
             this.addController(name.replace('Controller',''),new Controller(this,this.service(name),this.services))
         }
     }
-    load<T extends 'controllers'|'services'|'models'>(dir,type:T):Map<string,App.LoadResult<T>>{
+    load<T extends 'controllers'|'services'|'models'>(dir:string,type:T):Map<string,App.LoadResult<T>>{
         const url = path.resolve(App.baseDir, dir);
         const files = fs.readdirSync(url);
         files.forEach(file => {
@@ -156,10 +189,12 @@ export class App extends Koa{
         });
         switch (type){
             case "services":
+                // @ts-ignore
                 return services
             case "models":
-                return tables
+                return models
             case "controllers":
+                // @ts-ignore
                 return controllers
             default:
                 throw '未知加载类型'
@@ -193,23 +228,27 @@ export class App extends Koa{
             this.sequelize.define(name, config,{timestamps:false})
         })
         // 根据表关系配置生成模型关系
-        for(const [name,table] of tables){
+        for(const [name,table] of models){
             const relations:Relations=Reflect.get(table.prototype.constructor,relationsKey)
             if(!relations) continue
+            // 建立 一对一 关系
             for(const relation of relations.hasOne){
-                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                const targetName=[...models.keys()].find(key=>models.get(key)===relation.getter())
                 this.model(name).hasOne(this.model(targetName),relation.options)
             }
+            // 建立 一对多 关系
             for(const relation of relations.hasMany){
-                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                const targetName=[...models.keys()].find(key=>models.get(key)===relation.getter())
                 this.model(name).hasMany(this.model(targetName),relation.options)
             }
+            // 建立 多对一 关系
             for(const relation of relations.belongsTo){
-                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                const targetName=[...models.keys()].find(key=>models.get(key)===relation.getter())
                 this.model(name).belongsTo(this.model(targetName),relation.options)
             }
+            // 建立 多对多 关系
             for(const relation of relations.belongsToMany){
-                const targetName=[...tables.keys()].find(key=>tables.get(key)===relation.getter())
+                const targetName=[...models.keys()].find(key=>models.get(key)===relation.getter())
                 this.model(name).belongsToMany(this.model(targetName),relation.options)
             }
         }
@@ -222,13 +261,14 @@ export class App extends Koa{
             this.services[name].model=this.model(name)
             this.services[name].models=this.models
         }
+        this.emit('ready')
         this.use(KoaBodyParser())
             .use(this.router.routes())
             .use(this.router.allowedMethods())
         this.listen(port,()=>{
             this.logger.info('server listening at '+ getIpAddress().map(ip=>`http://${ip}:${port}`).join(' and '))
         })
-        this.emit('ready')
+        this.emit('start')
     }
 }
 export namespace App{
@@ -252,12 +292,13 @@ export namespace App{
         methods:Request[]
         desc?:string
         tags?:string[]
-        rules?:Rules
+        query:Rules
+        body:Rules
     }
     interface ResultMap{
-        controllers:Class
-        models:Model
-        services:Class
+        controllers:ControllerConstruct
+        models:BaseModel
+        services:ServiceConstruct
     }
     export type LoadResult<T extends keyof ResultMap>=ResultMap[T]
     export type LogLevel="trace" | "debug" | "info" | "warn" | "error" | "fatal" | "mark" | "off"

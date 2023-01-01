@@ -1,6 +1,6 @@
-export class Model{
+export class BaseModel{
 }
-export interface Model{
+export interface BaseModel{
     new(...args:any[]):any
 }
-export const tables:Map<string,Model>=new Map<string, Model>()
+export const models:Map<string,BaseModel>=new Map<string, BaseModel>()

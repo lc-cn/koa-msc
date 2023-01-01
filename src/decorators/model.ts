@@ -1,20 +1,20 @@
-import {Model, tables} from "@/model";
+import {BaseModel, models} from "@/model";
 import {set} from "./index";
 import {BelongsToManyOptions, BelongsToOptions, DataType, DataTypes, HasManyOptions, HasOneOptions} from "sequelize";
 import {deepClone, toLowercaseFirst} from "@/utils";
-export function Table(name){
+export function Model(name){
     if(name && typeof name!=="string"){
-        set(toLowercaseFirst(name.name.replace('Model','')),name,tables)
+        set(toLowercaseFirst(name.name.replace('Model','')),name,models)
         return name
     }
     else if(name && typeof name==='string'){
         return (target)=>{
-            set(name,target,tables)
+            set(name,target,models)
             return target
         }
     }
     return (target)=>{
-        set(toLowercaseFirst(target.name.toString().replace('Model','')),target,tables)
+        set(toLowercaseFirst(target.name.toString().replace('Model','')),target,models)
         return target
     }
 }
@@ -31,6 +31,20 @@ export interface Relations {
     hasOne:Relation<HasOneOptions>[],
     hasMany:Relation<HasManyOptions>[]
 }
+export type ColumnConfig={
+    allowNull?: boolean
+    field?: string
+    defaultValue?: unknown
+    type: DataType;
+    unique?: boolean | string | { name: string; msg: string };
+    primaryKey?: boolean;
+    autoIncrement?: boolean;
+    autoIncrementIdentity?: boolean;
+    comment?: string;
+    get?(): unknown
+
+    set?(value: unknown): void
+}
 export type ColumnDesc=DataType|{
     allowNull?: boolean
     field?: string
@@ -41,15 +55,14 @@ export type ColumnDesc=DataType|{
     autoIncrement?: boolean;
     autoIncrementIdentity?: boolean;
     comment?: string;
-
     get?(): unknown
 
     set?(value: unknown): void
 }
-export interface ColumnConfig{
-    [key:string]:ColumnDesc
+export interface ColumnsConfig{
+    [key:string]:ColumnConfig
 }
-type Getter=()=>Model
+type Getter=()=>BaseModel
 function get(target,key,defaultValue){
     if(!Reflect.has(target,key)) Reflect.set(target,key,defaultValue)
     return Reflect.get(target,key)
@@ -69,6 +82,9 @@ export function BelongsTo(getter:Getter,options?:BelongsToOptions){
         })
     }
 }
+export function isDataType(config:ColumnDesc):config is DataType{
+    return typeof config==="string" || (typeof config==='function' && Object.keys(DataTypes).includes(config.name)) || config['validate']
+}
 export function BelongsToMany(getter:Getter,options?:BelongsToManyOptions){
     return (target)=>{
         const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
@@ -78,15 +94,47 @@ export function BelongsToMany(getter:Getter,options?:BelongsToManyOptions){
         })
     }
 }
-const typeMap={
-    string:DataTypes.TEXT,
-    number:DataTypes.NUMBER,
-    date:DataTypes.DATE
-}
 export function Column(config:ColumnDesc){
     return (target,name)=>{
-        const columnConfig:ColumnConfig=get(target.constructor,columnsKey,{})
-        columnConfig[name]=config
+        const columnsConfig:ColumnsConfig=get(target.constructor,columnsKey,{})
+        const transConfig:ColumnConfig=isDataType(config)?{
+            type:config
+        }:config
+        const columnConfig:ColumnConfig=columnsConfig[name]||{type:transConfig.type}
+        columnsConfig[name]={
+            ...columnConfig,
+            ...transConfig,
+        }
+    }
+}
+export function AllowNull(allow:boolean=true){
+    return (target,name)=>{
+        const columnsConfig:ColumnsConfig=get(target.constructor,columnsKey,{})
+        const columnConfig:ColumnConfig=columnsConfig[name]||{type:DataTypes.TEXT}
+        columnsConfig[name]={
+            ...columnConfig,
+            allowNull:!!allow
+        }
+    }
+}
+export function PrimaryKey(isPrimaryKey:boolean=true){
+    return (target,name)=>{
+        const columnsConfig:ColumnsConfig=get(target.constructor,columnsKey,{})
+        const columnConfig:ColumnConfig=columnsConfig[name]||{type:DataTypes.TEXT}
+        columnsConfig[name]={
+            ...columnConfig,
+            primaryKey:!!isPrimaryKey
+        }
+    }
+}
+export function Comment(comment:string){
+    return (target,name)=>{
+        const columnsConfig:ColumnsConfig=get(target.constructor,columnsKey,{})
+        const columnConfig:ColumnConfig=columnsConfig[name]||{type:DataTypes.TEXT}
+        columnsConfig[name]={
+            ...columnConfig,
+            comment
+        }
     }
 }
 export function HasMany(getter:Getter,options?:HasManyOptions){

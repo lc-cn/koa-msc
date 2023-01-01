@@ -1,6 +1,6 @@
 import {controllers} from '@/controller'
 import {Rule, Rules} from 'async-validator'
-import {deepClone, deepMerge, toLowercaseFirst} from "@/utils";
+import {toLowercaseFirst} from "@/utils";
 export function Controller(path:string,name?:string){
     return (target)=>{
         name=name||toLowercaseFirst(target.name.replace('Controller',''))
@@ -30,7 +30,8 @@ export interface MethodConfig{
     method:Request[]
     desc?:string
     tags?:string[]
-    rules?:Rules
+    query?:Rules
+    body?:Rules
 }
 export function RequestMapping(path:string,method:Request|Request[]){
     return (target, name, descriptor)=> {
@@ -56,8 +57,8 @@ function getMethod(target,name:string){
 }
 export function Param(key:string,value:Rule){
     return (target,name,descriptor)=>{
-        const methodConfig=getMethod(target,name)
-        const rules=methodConfig.rules||={}
+        const methodConfig:MethodConfig=getMethod(target,name)
+        const rules=methodConfig.query||={}
         rules[key]=value
         return descriptor
     }
@@ -81,29 +82,20 @@ export function Describe(desc:string){
 export function Params(newRules:Rules){
     return (target,name,descriptor)=>{
         const methodConfig=getMethod(target,name)
-        const rules=methodConfig.rules||={}
+        const rules=methodConfig.query||={}
         Object.entries(newRules).forEach(([key,rule])=>{
             rules[key]=rule
         })
         return descriptor
     }
 }
-export type Pagination<I extends any=any,S extends string='pageSize',N extends string='pageNum',T extends string='total',L extends string='list'>={
-    [P in (S|N|T|L)]?:P extends L?I[]:number
-}
-export interface PageConfig extends Partial<Record<keyof Pagination,string>>{}
-export const defaultPageConfig:PageConfig={
-    pageNum:'pageNum',
-    pageSize:'pageSize',
-    total:'total',
-    list:'list'
-}
-export function pagination<I extends any>(list:I[],pageNum:number=1,pageSize:number=10,config:PageConfig=defaultPageConfig):Pagination<I>{
-    config=deepMerge(deepClone(defaultPageConfig),config)
-    return {
-        [config.pageNum]:pageNum,
-        [config.pageSize]:pageSize,
-        [config.list]:list.filter((_,index)=>index>=(pageNum-1)*pageSize && index<pageNum*pageSize),
-        [config.total]:list.length
+export function Body(newRules:Rules){
+    return (target,name,descriptor)=>{
+        const methodConfig=getMethod(target,name)
+        const rules=methodConfig.body||={}
+        Object.entries(newRules).forEach(([key,rule])=>{
+            rules[key]=rule
+        })
+        return descriptor
     }
 }

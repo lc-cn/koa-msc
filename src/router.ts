@@ -1,6 +1,6 @@
 import KoaRouter,{RouterOptions as Options} from '@koa/router'
 import {WebSocketServer} from "ws";
-import http from "http";
+import * as http from "http";
 import {parse} from "url";
 export class Router extends KoaRouter{
     constructor(public server:http.Server,options:RouterOptions) {

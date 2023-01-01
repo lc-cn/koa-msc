@@ -1,12 +1,7 @@
-import {Service} from "koa-msc";
-import {Model,ModelStatic} from "sequelize";
+import {Serve, Service} from "koa-msc";
 import {GroupInfo} from "@/models/Group";
 @Service
-export class GroupService{
-    public model:ModelStatic<Model<GroupInfo>>
-    public models
-    constructor() {
-    }
+export class GroupService extends Serve<GroupInfo>{
     async getGroupList(){
         return await this.model.findAll({
             include:this.models.user
