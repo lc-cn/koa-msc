@@ -1,6 +1,15 @@
-import {Model, ModelStatic, Sequelize, Transaction,WhereOptions} from "sequelize";
+import {
+    Attributes, CreateOptions, DestroyOptions,
+    FindAndCountOptions, FindOptions,
+    Model,
+    ModelStatic,
+    NonNullFindOptions,
+    Sequelize,
+    Transaction, UpdateOptions,
+    WhereOptions,
+} from "sequelize";
 import {Class, PageConfig, pagination} from "@/utils";
-import {MakeNullishOptional} from "sequelize/types/utils";
+import {Col, Fn, Literal, MakeNullishOptional} from "sequelize/types/utils";
 type TransactionCallback=(t:Transaction)=>any|Promise<any>
 type Result<T extends (...args:any[])=>any>=T extends (...args:any[])=>infer R?R:unknown
 export type ServiceConstruct=Class<BaseService>
@@ -8,6 +17,7 @@ export const services:Map<string,ServiceConstruct>=new Map<string, ServiceConstr
 export interface BaseService{
     new(...args:any[]):any
 }
+type Values<M>={[key in keyof Attributes<Model<M>>]?: Attributes<Model<M>>[key] | Fn | Col | Literal}
 export class BaseService<M=Record<string, any>>{
     public model:ModelStatic<Model<M>>
     public models:Record<string, ModelStatic<Model>>
@@ -21,18 +31,18 @@ export class BaseService<M=Record<string, any>>{
             resolve(t)
         })
     }
-    list(condition:WhereOptions<M>){
+    list(condition:WhereOptions<M>,options?:Omit<FindOptions<M>, 'where'>){
         return this.model.findAll({
-            where:condition
+            where:condition,
+            ...(options||{})
         })
     }
-    async pagination(condition:WhereOptions<M>,pageNum:number=1,pageSize:number=2,config?:PageConfig){
-        const total=await this.model.count({where:condition})
-        if(!total) return {list:[],pageNum,pageSize,total}
-        const list=await this.model.findAll({
+    async pagination(condition:WhereOptions<M>,pageNum:number=1,pageSize:number=20,config?:PageConfig,options?:Omit<FindAndCountOptions<Attributes<Model<M>>>, 'group'|'where'>){
+        const {rows:list,count:total}=await this.model.findAndCountAll({
             where:condition,
-            limit:pageNum,
-            offset:(pageNum-1)* pageSize
+            limit:pageSize,
+            offset:(pageNum-1) * pageSize,
+            ...(options||{})
         })
         return pagination({
             list,
@@ -41,29 +51,26 @@ export class BaseService<M=Record<string, any>>{
             total
         },config)
     }
-    info(condition:WhereOptions<M>){
+    info(condition:WhereOptions<M>,options?:Omit<NonNullFindOptions<Attributes<Model<M>>>, 'where'>){
         return this.model.findOne({
             where:condition,
-            include:[
-                {
-                    model:this.models.route,
-                    through:{attributes:[]},
-                },
-            ]
+            ...(options||{})
         })
     }
     // @ts-ignore
-    add(info:MakeNullishOptional<M>){
-        return this.model.create(info)
+    add(info:MakeNullishOptional<M>,options?:CreateOptions<M>){
+        return this.model.create(info,options)
     }
-    update(condition:WhereOptions<M>,payload:Partial<M>){
+    update(condition:WhereOptions<M>,payload:Values<M>,options?:Omit<UpdateOptions<Attributes<Model<M>>>, 'returning'|'where'>){
         return this.model.update(payload,{
-            where:condition
+            where:condition,
+            ...(options||{})
         })
     }
-    delete(condition:WhereOptions<M>){
+    delete(condition:WhereOptions<M>,options?:Omit<DestroyOptions<M>, 'where'>){
         return this.model.destroy({
-            where:condition
+            where:condition,
+            ...(options||{})
         })
     }
 
