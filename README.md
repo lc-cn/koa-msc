@@ -54,64 +54,50 @@ mkdir services
 mkdir models
 ```
 ## 5.在对应文件夹新建`User.ts`，并编写相关代码
-1. src/controllers/User.ts
-```typescript
-import {Controller,RequestMapping,Request} from 'koa-msc'
-import {UserService} from '../services/User'
-@Controller('/hello')
-export class UserController{
-    constructor(public service:UserService,public services) {
-        this.service=service//将会获取到UserService
-        this.services=services//可以通过键值对的形式访问当前系统所有service
-    }
-
-    @RequestMapping('list',Request.get)
-    getUserList(ctx){
-        return this.service.getUserList()
-    }
-    @RequestMapping('add',Request.post)
-    addUser(ctx){
-        return this.service.addUser(ctx.req.body)
-    }
-}
-```
-2. src/services/User.ts
+1. src/models/User.ts
 
 ```typescript
-import {Service} from 'koa-msc'
-import {ModelStatic,Model} from "sequelize";
-import {UserModel} from '../models/User'
-
-@Service
-export class UserService {
-    constructor(model:ModelStatic<Model<UserModel>>, models) {
-        this.model = model//将会获取到UserModel
-        this.models = models//可以通过键值对的形式访问当前系统所有model
-    }
-
-    getUserList() {
-        return this.model.findAll()
-    }
-
-    addUser(userInfo) {
-        return this.model.create(userInfo)
-    }
-}
-```
-3. src/models/User.ts
-
-```typescript
-import {Column, Model} from 'koa-msc'
+import {Column, Model,BaseModel} from 'koa-msc'
 import {DataTypes} from "sequelize";
 
 @Model
-class UserModel {
+class UserModel extends BaseModel{
     @Column(DataTypes.STRING)
     user_id: string
     @Column(DataTypes.STRING)
     name: string
     @Column(DataTypes.INTEGER)
     age: number
+}
+```
+2. src/services/User.ts
+
+```typescript
+import {Service,BaseService} from 'koa-msc'
+import {ModelStatic,Model} from "sequelize";
+import {UserModel} from '../models/User'
+
+@Service
+export class UserService extends BaseService<UserService>{
+}
+```
+3. src/controllers/User.ts
+
+```typescript
+import {Controller,BaseController, RequestMapping, Request} from 'koa-msc'
+import {UserService} from '../services/User'
+
+@Controller('/hello')
+export class UserController extends BaseController<UserController> {
+    @RequestMapping('list', Request.get)
+    getUserList(ctx) {
+        return this.service.list()
+    }
+
+    @RequestMapping('add', Request.post)
+    addUser(ctx) {
+        return this.service.add(ctx.req.body)
+    }
 }
 ```
 ## 6. 配置启动命令(若为模板仓库创建并未做修改，可跳过)

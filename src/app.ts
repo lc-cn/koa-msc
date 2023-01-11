@@ -5,7 +5,7 @@ import KoaBodyParser from "koa-bodyparser";
 import Schema, {Rules} from 'async-validator'
 import * as fs from 'fs'
 import {Logger, getLogger} from "log4js";
-import {Options as DataBaseConfig, Sequelize} from "sequelize";
+import {Attributes, Model, Options as DataBaseConfig, Sequelize} from "sequelize";
 import {ListenOptions} from "net";
 import {networkInterfaces} from "os";
 import {Class, deepClone, deepMerge, toLowercaseFirst} from "./utils";

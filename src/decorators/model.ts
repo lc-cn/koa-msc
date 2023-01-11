@@ -1,6 +1,6 @@
 import {BaseModel, models} from "@/model";
 import {set} from "./index";
-import {BelongsToManyOptions, BelongsToOptions, DataType, DataTypes, HasManyOptions, HasOneOptions} from "sequelize";
+import {BelongsToManyOptions,Model as SModel, BelongsToOptions, DataType, DataTypes, HasManyOptions, HasOneOptions} from "sequelize";
 import {deepClone, toLowercaseFirst} from "@/utils";
 export function Model(name){
     if(name && typeof name!=="string"){
@@ -31,7 +31,7 @@ export interface Relations {
     hasOne:Relation<HasOneOptions>[],
     hasMany:Relation<HasManyOptions>[]
 }
-export type ColumnConfig={
+export type ColumnConfig<M extends SModel =SModel>={
     allowNull?: boolean
     field?: string
     defaultValue?: unknown
@@ -41,9 +41,8 @@ export type ColumnConfig={
     autoIncrement?: boolean;
     autoIncrementIdentity?: boolean;
     comment?: string;
-    get?(): unknown
-
-    set?(value: unknown): void
+    get?(this:M): unknown
+    set?(this:M,value: unknown): void
 }
 export type ColumnDesc=DataType|{
     allowNull?: boolean
