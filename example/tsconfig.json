@@ -13,7 +13,8 @@
       "dom"
     ],
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "koa-msc": ["../lib"]
     },
   },
   "include": ["./src/"]

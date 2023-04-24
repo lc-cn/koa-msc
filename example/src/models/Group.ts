@@ -1,9 +1,9 @@
-import {Column, Table, Model, HasMany} from "koa-msc";
+import {Column, BaseModel, Model, HasMany} from "koa-msc";
 import {DataTypes} from "sequelize";
 import {User} from "@/models/User";
-@Table
+@Model
 @HasMany(()=>User)
-export class Group extends Model{
+export class Group extends BaseModel{
     @Column(DataTypes.STRING)
     name:string
 }

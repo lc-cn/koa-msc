@@ -1,10 +1,9 @@
-import {BelongsTo, Column, Model} from "koa-msc";
+import {BelongsTo, Column, Model,BaseModel} from "koa-msc";
 import {DataTypes} from "sequelize";
-import {Table} from "koa-msc";
 import {Group} from "@/models/Group";
-@Table
+@Model
 @BelongsTo(()=>Group)
-export class User extends Model{
+export class User extends BaseModel{
     @Column(DataTypes.STRING)
     public name:string
     @Column({

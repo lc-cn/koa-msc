@@ -1,15 +1,12 @@
-import {App, Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
+import { BaseController, Controller, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserService} from "@/services/User";
 import {UserInfo} from '@/models/User'
 
 @Controller('/user')
-export class UserController{
-    constructor(public app:App,public service:UserService,public services) {
-
-    }
+export class UserController extends BaseController<UserService>{
     @RequestMapping('list',Request.get)
-    async hello(ctx){
-        return pagination(await this.service.getUserList(),1,10)
+    async hello(){
+        return this.service.pagination({},1,10)
     }
     @RequestMapping('/add',[Request.post,Request.get])
     @Params({name:{type:'string',required:true,min:4,max:10}})

@@ -15,6 +15,8 @@
 </div>
 
 # 使用示例
+- 完整样例参考example目录代码
+
 ## 1.初始化项目
 1. [点击这里](https://github.com/l-collect/ts-dev-template/generate) 根据[ts-dev-template](https://github.com/l-collect/ts-dev-template) 模板仓库创建一个你自己的ts项目(需要你有github账号并能正常访问github官网)
 2. 使用git拉取刚刚创建好的项目
@@ -30,9 +32,9 @@ npm install koa-msc
 ```typescript
 import {App} from 'koa-msc'
 const app=new App({
-    controller_path:'controllers',
-    service_path:'services',
-    model_path:'models',
+    controller_path:'src/controllers',// 相对于启动目录
+    service_path:'src/services',// 相对于启动目录
+    model_path:'src/models',// 相对于启动目录
     log_level:'info',
     sequelzie:{
         host:'localhost',

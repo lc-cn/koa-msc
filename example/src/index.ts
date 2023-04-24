@@ -1,21 +1,21 @@
 import {App} from "koa-msc";
-import {join} from 'path'
+import * as process from "process";
 const app=new App({
-    controller_path:join(__dirname,'controllers'),
-    model_path:join(__dirname,'models'),
-    service_path:join(__dirname,'services'),
+    controller_path:'src/controllers',
+    model_path:'src/models',
+    service_path:'src/services',
     router:{
         prefix:'/api'
     },
     sequelize:{
-        host:'148.70.201.93',
+        host:'127.0.0.1',
         database:'koa_test',
         logging(sql){
             app.logger.debug(sql)
         },
         dialect:'mysql',
         username:'root',
-        password:'l196023.'
+        password:''
     }
 })
 

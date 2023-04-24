@@ -5,13 +5,18 @@ import KoaBodyParser from "koa-bodyparser";
 import Schema, {Rules} from 'async-validator'
 import * as fs from 'fs'
 import {Logger, getLogger} from "log4js";
-import {Attributes, Model, Options as DataBaseConfig, Sequelize} from "sequelize";
+import {
+    BelongsToManyOptions,
+    ModelAttributes,
+    Options as DataBaseConfig,
+    Sequelize
+} from "sequelize";
 import {ListenOptions} from "net";
 import {networkInterfaces} from "os";
 import {Class, deepClone, deepMerge, toLowercaseFirst} from "./utils";
 import {
     ColumnsConfig,
-    columnsKey,
+    columnsKey, isGetter,
     MethodConfig,
     Relations,
     relationsKey,
@@ -23,6 +28,7 @@ import {models, BaseModel} from "./model";
 import {BaseService, ServiceConstruct, services} from "./service";
 import {ControllerConstruct, controllers} from "./controller";
 import {SequelizeHooks} from "sequelize/types/hooks";
+import * as process from "process";
 
 export function getIpAddress() {
     const interfaces = networkInterfaces()
@@ -47,11 +53,12 @@ export class App extends Koa {
     public router: Router
     public httpServer: Server
     public sequelize: Sequelize
-    static baseDir: string = __dirname
+    static baseDir: string
     public apis: App.Api[] = []
 
     constructor(config: App.Config) {
         super(config.koa)
+        App.baseDir=process.cwd()
         this.httpServer = createServer(this.callback())
         this.config = deepMerge(deepClone(App.defaultConfig) as App.Config, config)
         this.router = new Router(this.httpServer, this.config.router)
@@ -122,7 +129,7 @@ export class App extends Koa {
     }
 
     initModels() {
-        this.logger.info('正在扫描并创建Models')
+        this.logger.info('正在扫描Models配置')
         const tableConfigs = this.load(this.config.model_path, "models")
         for (const [name, Table] of tableConfigs) {
             this.define(toLowercaseFirst(name.replace('Model', '')), Reflect.get(Table, columnsKey))
@@ -172,7 +179,14 @@ export class App extends Koa {
             })
             for (const method of methodConfig.method) {
                 this.router[method.toLowerCase()]('/' + path, async (ctx: Context) => {
-                    const queryObj=JSON.parse(JSON.stringify(ctx['query']))
+                    let queryObj=JSON.parse(JSON.stringify(ctx['query']))
+                    if(queryObj) queryObj=Object.fromEntries(Object.entries(queryObj).map(([key,value]:[string,string])=>{
+                        try{
+                            return [key,JSON.parse(value)]
+                        }catch {
+                            return [key,value]
+                        }
+                    }))
                     if (methodConfig.query) {
                         const schema = new Schema(methodConfig.query)
                         let err = null
@@ -247,10 +261,31 @@ export class App extends Koa {
     }
 
     async start(port: number) {
+
+        this.logger.info('根据Model配置创建模型...')
         // 通过sequelize定义模型
-        Object.entries(this.tableConfig).forEach(([name, config]) => {
-            this.sequelize.define(name, config, {timestamps: false})
-        })
+        const relateModel:{name:string,config:ColumnsConfig}[]=[]
+        for(const [name,config] of Object.entries(this.tableConfig)){
+            if(config.references){
+                relateModel.push({name,config})// 关联表先跳过，避免循环依赖问题
+                continue;
+            }
+            this.sequelize.define(name, config as unknown as ModelAttributes, {timestamps: false})
+        }
+        // 创建关联表
+        for(const {name,config} of relateModel){
+            Object.keys(config).forEach(key=>{
+                if(config[key].references){
+                    const model=config[key].references
+                    if(typeof model!=="string" && isGetter(model.model)) {
+                        const modelName:string=toLowercaseFirst(model.model().name.replace('Model', ''))
+                        model.model=this.model(modelName)
+                    }
+                }
+            })
+            this.sequelize.define(name,config as unknown as ModelAttributes,{timestamps: false})
+        }
+        this.logger.info('根据Model配置构建模型关联关系...')
         // 根据表关系配置生成模型关系
         for (const [name, table] of models) {
             const relations: Relations = Reflect.get(table.prototype.constructor, relationsKey)
@@ -273,13 +308,18 @@ export class App extends Koa {
             // 建立 多对多 关系
             for (const relation of relations.belongsToMany) {
                 const targetName = [...models.keys()].find(key => models.get(key) === relation.getter())
-                this.model(name).belongsToMany(this.model(targetName), relation.options)
+                if(relation.options.through && isGetter(relation.options.through)){
+                    const modelName:string=toLowercaseFirst(relation.options.through().name.replace('Model', ''))
+                    relation.options.through=this.model(modelName)
+                }
+                this.model(name).belongsToMany(this.model(targetName), relation.options as unknown as BelongsToManyOptions)
             }
         }
         this.logger.info('正在同步数据库Models')
         await this.sequelize.sync({alter: true}).catch(e => {
             this.logger.error(e)
         })
+        this.logger.info('挂载Model到对应Service....')
         // 把模型挂到服务上去，不然用不了
         for (const name in this.services) {
             this.services[name].model = this.model(name)
@@ -307,10 +347,10 @@ export namespace App {
     }
 
     export const defaultConfig: Partial<Config> = {
-        controller_path: 'controllers',
-        model_path: 'models',
+        controller_path: path.resolve(process.cwd(),'src/controllers'),
+        model_path: path.resolve(process.cwd(),'src/models'),
         log_level: 'info',
-        service_path: 'services',
+        service_path: path.resolve(process.cwd(),'src/services'),
     }
 
     export interface Api {

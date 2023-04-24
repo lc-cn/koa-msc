@@ -41,7 +41,6 @@
     "/lib/**/LICENSE"
   ],
   "dependencies": {
-    "koa-msc": "^1.1.25",
     "sequelize": "^6.21.2"
   }
 }

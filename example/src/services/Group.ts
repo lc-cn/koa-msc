@@ -1,7 +1,7 @@
-import {Serve, Service} from "koa-msc";
-import {GroupInfo} from "@/models/Group";
+import {BaseService, Service} from "koa-msc";
+import {Group,GroupInfo} from "@/models/Group";
 @Service
-export class GroupService extends Serve<GroupInfo>{
+export class GroupService extends BaseService<Group>{
     async getGroupList(){
         return await this.model.findAll({
             include:this.models.user

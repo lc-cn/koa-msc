@@ -1,15 +1,12 @@
-import {App, Controller, pagination, Param, Params, Request, RequestMapping} from "koa-msc";
+import { BaseController, Controller, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserInfo} from '@/models/User'
 import {GroupService} from "@/services/Group";
 
 @Controller('/group')
-export class GroupController{
-    constructor(public app:App,public service:GroupService,public services) {
-
-    }
+export class GroupController extends BaseController<GroupService>{
     @RequestMapping('list',Request.get)
-    async hello(ctx){
-        return pagination(await this.service.getGroupList(),1,10)
+    async hello(){
+        return this.service.pagination({},1,10)
     }
     @RequestMapping('/add',[Request.post,Request.get])
     @Params({name:{type:'string',required:true,min:4,max:10}})

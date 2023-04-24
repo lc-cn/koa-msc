@@ -1,7 +1,25 @@
 import {BaseModel, models} from "@/model";
 import {set} from "./index";
-import {BelongsToManyOptions,Model as SModel, BelongsToOptions, DataType, DataTypes, HasManyOptions, HasOneOptions} from "sequelize";
+import {
+    Model as SModel,
+    BelongsToOptions,
+    DataType,
+    DataTypes,
+    HasManyOptions,
+    HasOneOptions, ManyToManyOptions, ModelStatic,
+} from "sequelize";
 import {deepClone, toLowercaseFirst} from "@/utils";
+import {ModelAttributeColumnReferencesOptions} from "sequelize/types/model";
+import {ForeignKeyOptions} from "sequelize/types/associations/base";
+import {ThroughOptions} from "sequelize/types/associations/belongs-to-many";
+export interface BelongsToManyOptions extends ManyToManyOptions{
+    through: ModelStatic<SModel> | string | ThroughOptions|Getter;
+    otherKey?: string | ForeignKeyOptions;
+    sourceKey?: string;
+    targetKey?: string;
+    timestamps?: boolean;
+    uniqueKey?: string;
+}
 export function Model(name){
     if(name && typeof name!=="string"){
         set(toLowercaseFirst(name.name.replace('Model','')),name,models)
@@ -39,10 +57,14 @@ export type ColumnConfig<M extends SModel =SModel>={
     unique?: boolean | string | { name: string; msg: string };
     primaryKey?: boolean;
     autoIncrement?: boolean;
+    references?:string | {model:Getter,key:string} | ModelAttributeColumnReferencesOptions
     autoIncrementIdentity?: boolean;
     comment?: string;
     get?(this:M): unknown
     set?(this:M,value: unknown): void
+}
+export function isGetter(source:any):source is Getter{
+    return typeof source==="function" && source.prototype===undefined
 }
 export type ColumnDesc=DataType|{
     allowNull?: boolean
@@ -72,6 +94,38 @@ const defaultRelation:Relations={
     hasOne:[],
     belongsToMany:[]
 }
+export function ForeignKey(getter:Getter,key:string='id'){
+    return (target,name)=>{
+        const columnsConfig:ColumnsConfig=get(target.constructor,columnsKey,{})
+        const columnConfig:ColumnConfig=columnsConfig[name]||{type:DataTypes.TEXT}
+        columnsConfig[name]={
+            ...columnConfig,
+            references:{
+                model:getter,
+                key
+            }
+        }
+    }
+}
+export function HasOne(getter:Getter,options?:HasOneOptions){
+    return (target)=>{
+        const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
+        relations.hasOne.push({
+            getter,
+            options
+        })
+    }
+}
+
+export function HasMany(getter:Getter,options?:HasManyOptions){
+    return (target)=>{
+        const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
+        relations.hasMany.push({
+            getter,
+            options
+        })
+    }
+}
 export function BelongsTo(getter:Getter,options?:BelongsToOptions){
     return (target)=>{
         const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
@@ -81,9 +135,6 @@ export function BelongsTo(getter:Getter,options?:BelongsToOptions){
         })
     }
 }
-export function isDataType(config:ColumnDesc):config is DataType{
-    return typeof config==="string" || (typeof config==='function' && Object.keys(DataTypes).includes(config.name)) || config['validate']
-}
 export function BelongsToMany(getter:Getter,options?:BelongsToManyOptions){
     return (target)=>{
         const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
@@ -92,6 +143,9 @@ export function BelongsToMany(getter:Getter,options?:BelongsToManyOptions){
             options
         })
     }
+}
+export function isDataType(config:ColumnDesc):config is DataType{
+    return typeof config==="string" || (typeof config==='function' && Object.keys(DataTypes).includes(config.name)) || config['validate']
 }
 export function Column(config:ColumnDesc){
     return (target,name)=>{
@@ -134,23 +188,5 @@ export function Comment(comment:string){
             ...columnConfig,
             comment
         }
-    }
-}
-export function HasMany(getter:Getter,options?:HasManyOptions){
-    return (target)=>{
-        const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
-        relations.hasMany.push({
-            getter,
-            options
-        })
-    }
-}
-export function HasOne(getter:Getter,options?:HasOneOptions){
-    return (target)=>{
-        const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
-        relations.hasOne.push({
-            getter,
-            options
-        })
     }
 }

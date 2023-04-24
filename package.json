@@ -1,6 +1,6 @@
 {
   "name": "koa-msc",
-  "version": "1.2.10",
+  "version": "1.2.13",
   "description": "一个使用装饰器开发后端API的框架",
   "main": "lib/index.js",
   "scripts": {

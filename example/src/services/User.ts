@@ -1,8 +1,8 @@
-import {Serve, Service} from "koa-msc";
-import {UserInfo} from "@/models/User";
+import {BaseService, Service} from "koa-msc";
+import {UserInfo,User} from "@/models/User";
 import {Transaction} from "sequelize";
 @Service
-export class UserService extends Serve<UserInfo>{
+export class UserService extends BaseService<User>{
     async getUserList(){
         const t=await this.transaction()
         return await this.model.findAll({
