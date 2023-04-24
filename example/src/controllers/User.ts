@@ -1,6 +1,7 @@
 import { BaseController, Controller, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserService} from "@/services/User";
 import {User} from '@/models/User'
+import {Group} from "@/models/Group";
 
 @Controller('/user')
 export class UserController extends BaseController<UserService>{
@@ -25,7 +26,12 @@ export class UserController extends BaseController<UserService>{
     @Param('id',{type:'number',required:true})
     @RequestMapping('/info',Request.get)
     async info({id}:Pick<User, 'id'>){
-        return await this.service.info({id})
+        return await this.service.info({id},{
+            rejectOnEmpty: true,
+            include: {
+                model:this.service.models.group,
+            }
+        })
     }
     @RequestMapping('/remove',Request.delete)
     @Param('id',{type:'number',transform:(value)=>Number(value)})

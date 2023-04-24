@@ -25,7 +25,10 @@ export class GroupController extends BaseController<GroupService>{
     @Param('id',{type:'number',required:true})
     @RequestMapping('/info',Request.get)
     async info({id}:Pick<Group, 'id'>){
-        return await this.service.info({id})
+        return await this.service.info({id},{
+            rejectOnEmpty:true,
+            include:this.service.models.user
+        })
     }
     @RequestMapping('/remove',Request.get)
     @Param('id',{type:'number',transform:(value)=>Number(value)})
