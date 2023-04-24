@@ -31,13 +31,13 @@ export class BaseService<M=Record<string, any>>{
             resolve(t)
         })
     }
-    list(condition:WhereOptions<M>,options?:Omit<FindOptions<M>, 'where'>){
+    list(condition:FindOptions<Attributes<Model<M>>>['where'],options?:Omit<FindOptions<Attributes<Model<M>>>, 'where'>){
         return this.model.findAll({
             where:condition,
             ...(options||{})
         })
     }
-    async pagination(condition:WhereOptions<M>,pageNum:number=1,pageSize:number=20,config?:PageConfig,options?:Omit<FindAndCountOptions<Attributes<Model<M>>>, 'group'|'where'>){
+    async pagination(condition:FindAndCountOptions<Attributes<Model<M>>>['where'],pageNum:number=1,pageSize:number=20,config?:PageConfig,options?:Omit<FindAndCountOptions<Attributes<Model<M>>>, 'group'|'where'>){
         const {rows:list,count:total}=await this.model.findAndCountAll({
             where:condition,
             limit:pageSize,
@@ -51,23 +51,23 @@ export class BaseService<M=Record<string, any>>{
             total
         },config)
     }
-    info(condition:WhereOptions<M>,options?:Omit<NonNullFindOptions<Attributes<Model<M>>>, 'where'>){
+    info(condition:NonNullFindOptions<Attributes<Model<M>>>['where'],options?:Omit<NonNullFindOptions<Attributes<Model<M>>>, 'where'>){
         return this.model.findOne({
             where:condition,
             ...(options||{})
         })
     }
     // @ts-ignore
-    add(info:MakeNullishOptional<M>,options?:CreateOptions<M>){
+    add(info:MakeNullishOptional<M>,options?:CreateOptions<Attributes<Model<M>>>){
         return this.model.create(info,options)
     }
-    update(condition:WhereOptions<M>,payload:Values<M>,options?:Omit<UpdateOptions<Attributes<Model<M>>>, 'returning'|'where'>){
+    update(condition:UpdateOptions<Attributes<Model<M>>>['where'],payload:Values<M>,options?:Omit<UpdateOptions<Attributes<Model<M>>>, 'returning'|'where'>){
         return this.model.update(payload,{
             where:condition,
             ...(options||{})
         })
     }
-    delete(condition:WhereOptions<M>,options?:Omit<DestroyOptions<M>, 'where'>){
+    delete(condition:DestroyOptions<Attributes<Model<M>>>['where'],options?:Omit<DestroyOptions<Attributes<Model<M>>>, 'where'>){
         return this.model.destroy({
             where:condition,
             ...(options||{})
