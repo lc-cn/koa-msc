@@ -1,21 +1,22 @@
 import {App} from "koa-msc";
 import * as process from "process";
+import * as path from "path";
 const app=new App({
     controller_path:'src/controllers',
     model_path:'src/models',
     service_path:'src/services',
+    log_level:'info',
+    transaction:true,
     router:{
         prefix:'/api'
     },
     sequelize:{
-        host:'127.0.0.1',
-        database:'koa_test',
+        dialect:'sqlite',
+        storage:path.resolve(process.cwd(),'database.sqlite'),
+        database:'test',
         logging(sql){
             app.logger.debug(sql)
         },
-        dialect:'mysql',
-        username:'root',
-        password:''
     }
 })
 

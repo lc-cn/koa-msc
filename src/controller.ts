@@ -3,7 +3,7 @@ import {BaseService} from "@/service";
 import {App} from "@/app";
 
 export class BaseController<S extends BaseService=BaseService> {
-    constructor(public app: App, public service: S, public services: Record<string, BaseService>) {
+    constructor(public app: App, public service: S, public services: App.Services) {
     }
 }
 

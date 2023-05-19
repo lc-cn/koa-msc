@@ -1,10 +1,11 @@
 {
   "name": "koa-msc",
-  "version": "1.2.14",
+  "version": "1.2.17",
   "description": "一个使用装饰器开发后端API的框架",
   "main": "lib/index.js",
   "scripts": {
-    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "compile": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "build": "npm run compile && dtsc --project tsconfig.dtsc.json",
     "dev": "npm run dev -w example",
     "pub": "npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -28,10 +29,12 @@
   },
   "homepage": "https://github.com/liucl-cn/koa-msc#readme",
   "devDependencies": {
+    "@types/cls-hooked": "^4.3.3",
     "@types/koa": "^2.13.4",
     "@types/koa__router": "^8.0.11",
     "@types/node": "latest",
     "@types/ws": "^8.5.3",
+    "dtsc": "^2.2.3",
     "ts-node-dev": "latest",
     "tsc-alias": "latest",
     "tsconfig-paths": "latest",
@@ -45,12 +48,11 @@
   "dependencies": {
     "@koa/router": "^10.1.1",
     "async-validator": "^4.2.5",
+    "cls-hooked": "^4.2.2",
     "koa": "^2.13.4",
     "koa-bodyparser": "^4.3.0",
-    "koa-msc": "^1.1.12",
     "log4js": "^6.5.2",
-    "mysql2": "^2.3.3",
-    "sequelize": "^6.21.2",
+    "sequelize": "^6.31.0",
     "ws": "^8.8.0"
   }
 }

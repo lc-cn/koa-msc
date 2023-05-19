@@ -9,7 +9,7 @@
 [样例](/example)
 </p>
 
-[![node engine](https://img.shields.io/node/v/oitq?color=339933&style=flat-square&labelColor=FAFAFA&logo=Node.js)](https://nodejs.org)
+[![node engine](https://img.shields.io/node/v/koa-msc?color=339933&style=flat-square&labelColor=FAFAFA&logo=Node.js)](https://nodejs.org)
 [![dm](https://shields.io/npm/dm/koa-msc)](https://www.npmjs.com/package/koa-msc)
 
 </div>
@@ -28,34 +28,46 @@ git clone https://github.com/用户名/仓库名.git # 此处仅为示范，请�
 ```shell
 npm install koa-msc
 ```
-## 3. 新建入口文件src/index.ts
+## 3. 根据你的数据库类型安装对应的依赖
+```shell
+npm i pg pg-hstore # PostgreSQL
+npm i mysql2 # MySQL
+npm i mariadb # MariaDB
+npm i sqlite3 # SQLite
+npm i tedious # Microsoft SQL Server
+npm i ibm_db # DB2
+```
+## 4. 新建入口文件src/index.ts
 ```typescript
 import {App} from 'koa-msc'
 const app=new App({
     controller_path:'src/controllers',// 相对于启动目录
     service_path:'src/services',// 相对于启动目录
     model_path:'src/models',// 相对于启动目录
-    log_level:'info',
-    sequelzie:{
-        host:'localhost',
-        port:3306,
-        database:'xxxx',
-        username:'root',
-        password:'*******',
+    transaction: true, // 是否启用事务
+    log_level:'info', // 日志等级
+    router:{ // KoaRouter初始化配置 参见 https://github.com/koajs/router/blob/master/API.md#new-routeropts
+        prefix:'/api'
+    },
+    sequelzie:{ // Sequelize初始化配置 参见 https://www.sequelize.cn/core-concepts/getting-started
+        dialect:'sqlite', 
+        storage:path.resolve(process.cwd(),'database.sqlite'),
+        database:'test',
         logging(msg){
             app.logger.info(msg)
         }
-    }
+    },
+    // ... Koa初始化配置 参见 https://koajs.com/#application
 })
 app.start(7777)
 ```
-## 4.在src目录新建三个文件夹，分别是`controllers`,`services`,`models`
+## 5.在src目录新建三个文件夹，分别是`controllers`,`services`,`models`
 ```shell
 mkdir controllers
 mkdir services
 mkdir models
 ```
-## 5.在对应文件夹新建`User.ts`，并编写相关代码
+## 6.在对应文件夹新建`User.ts`，并编写相关代码
 1. src/models/User.ts
 
 ```typescript
@@ -102,7 +114,7 @@ export class UserController extends BaseController<UserController> {
     }
 }
 ```
-## 6. 配置启动命令(若为模板仓库创建并未做修改，可跳过)
+## 7. 配置启动命令(若为模板仓库创建并未做修改，可跳过)
 在`package.json`的scripts添加启动命令
 ```json5
 {
@@ -117,7 +129,7 @@ export class UserController extends BaseController<UserController> {
   // ... 其他配置
 }
 ```
-## 7. 启动项目
+## 8. 启动项目
 ```shell
 npm run dev # 开发环境
 npm start # 生产环境(此处仅做演示，真实情况可根据个人需求处理，如tsc)

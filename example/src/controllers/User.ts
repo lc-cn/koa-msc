@@ -1,7 +1,6 @@
 import { BaseController, Controller, Param, Params, Request, RequestMapping} from "koa-msc";
 import {UserService} from "@/services/User";
 import {User} from '@/models/User'
-import {Group} from "@/models/Group";
 
 @Controller('/user')
 export class UserController extends BaseController<UserService>{

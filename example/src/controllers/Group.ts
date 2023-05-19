@@ -1,5 +1,4 @@
 import { BaseController, Controller, Param, Params, Request, RequestMapping} from "koa-msc";
-import {UserInfo} from '@/models/User'
 import {GroupService} from "@/services/Group";
 import {Group} from "@/models/Group";
 

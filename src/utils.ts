@@ -1,3 +1,5 @@
+import {networkInterfaces} from "os";
+
 export function deepMerge<T extends any>(base:T, ...from:T[]):T{
     if(from.length===0){
         return base
@@ -156,5 +158,19 @@ export function pagination<I extends any>(dataInfo:DataInfo<I>,config:PageConfig
         [config.list]:dataInfo.list,
         [config.total]:dataInfo.total
     }
+}
+
+export function getIpAddress() {
+    const interfaces = networkInterfaces()
+    const ips: string[] = []
+    for (let dev in interfaces) {
+        for (let j = 0; j < interfaces[dev].length; j++) {
+            if (interfaces[dev][j].family === 'IPv4') {
+                ips.push(interfaces[dev][j].address);
+            }
+        }
+    }
+    if (!ips.length) ips.push('127.0.0.1')
+    return ips
 }
 
