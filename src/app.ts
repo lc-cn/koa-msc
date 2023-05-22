@@ -35,7 +35,7 @@ export class App extends Koa {
     public config: App.Config
     public logger: Logger
     public services: App.Services={}
-    public controllers: Record<string, Class> = {}
+    public controllers: Record<string, ControllerConstruct> = {}
     private tableConfig: Record<string, ColumnsConfig> = {}
     public router: Router
     public httpServer: Server
@@ -207,22 +207,24 @@ export class App extends Koa {
 
     load<T extends 'controllers' | 'services' | 'models'>(dir: string, type: T): Map<string, App.LoadResult<T>> {
         const url = path.resolve(App.baseDir, dir);
-        const files = fs.readdirSync(url);
-        files.forEach(file => {
-            if (file.endsWith('.js') || (file.endsWith('.ts') && !file.endsWith('.d.ts'))) {
-                const filename = file.replace('.js', '').replace('.ts', '');
-                require(url + '/' + filename);
+        const files = fs.readdirSync(url,{withFileTypes:true});
+        files.forEach((file) => {
+            if(file.isFile()){
+                if (file.name.endsWith('.js') || (file.name.endsWith('.ts') && !file.name.endsWith('.d.ts'))) {
+                    const filename = file.name.replace('.js', '').replace('.ts', '');
+                    require(url + '/' + filename);
+                }
+            }else if(file.isDirectory() && this.config.deep_scan){
+                this.load(dir + '/' + file.name, type);
             }
         });
         switch (type) {
             case "services":
-                // @ts-ignore
-                return services
+                return services as Map<string, App.LoadResult<T>>
             case "models":
                 return models
             case "controllers":
-                // @ts-ignore
-                return controllers
+                return controllers as Map<string, App.LoadResult<T>>
             default:
                 throw '未知加载类型'
         }
@@ -345,6 +347,7 @@ export namespace App {
     export const defaultConfig: Partial<Config> = {
         controller_path: path.resolve(process.cwd(), 'src/controllers'),
         model_path: path.resolve(process.cwd(), 'src/models'),
+        deep_scan: true,
         log_level: 'info',
         service_path: path.resolve(process.cwd(), 'src/services'),
     }
@@ -380,6 +383,7 @@ export namespace App {
         controller_path?: string
         service_path?: string
         model_path?: string
+        deep_scan?: boolean
         koa?: KoaOptions
         router?: RouterOptions
         sequelize: DataBaseConfig
