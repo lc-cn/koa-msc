@@ -1,6 +1,6 @@
-import {services} from "@/service";
+import {services} from "koa-msc/service";
 import {set} from "./";
-import {toLowercaseFirst} from "@/utils";
+import {toLowercaseFirst} from "koa-msc/utils";
 export function Service(target)
 export function Service(name?:string)
 export function Service(arg){

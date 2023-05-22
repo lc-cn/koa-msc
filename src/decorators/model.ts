@@ -1,4 +1,4 @@
-import {BaseModel, models} from "@/model";
+import {BaseModel, models} from "koa-msc/model";
 import {set} from "./index";
 import {
     Model as SModel,
@@ -8,7 +8,7 @@ import {
     HasManyOptions,
     HasOneOptions, ManyToManyOptions, ModelStatic,
 } from "sequelize";
-import {deepClone, toLowercaseFirst} from "@/utils";
+import {deepClone, toLowercaseFirst} from "koa-msc/utils";
 import {ModelAttributeColumnReferencesOptions} from "sequelize/types/model";
 import {ForeignKeyOptions} from "sequelize/types/associations/base";
 import {ThroughOptions} from "sequelize/types/associations/belongs-to-many";

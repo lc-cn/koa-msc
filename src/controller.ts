@@ -1,6 +1,6 @@
 import {Class} from "./utils";
-import {BaseService} from "@/service";
-import {App} from "@/app";
+import {BaseService} from "koa-msc/service";
+import {App} from "koa-msc/app";
 
 export class BaseController<S extends BaseService=BaseService> {
     constructor(public app: App, public service: S, public services: App.Services) {

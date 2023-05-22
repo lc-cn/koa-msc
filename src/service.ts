@@ -6,11 +6,10 @@ import {
     NonNullFindOptions,
     Sequelize,
     Transaction, UpdateOptions,
-    WhereOptions,
 } from "sequelize";
-import {Class, PageConfig, Pagination, pagination} from "@/utils";
+import {Class, PageConfig, Pagination, pagination} from "koa-msc/utils";
 import {Col, Fn, Literal, MakeNullishOptional} from "sequelize/types/utils";
-import {App} from "@/app";
+import {App} from "koa-msc/app";
 type TransactionCallback=(t:Transaction)=>any|Promise<any>
 type Result<T extends (...args:any[])=>any>=T extends (...args:any[])=>infer R?R:unknown
 export type ServiceConstruct=Class<BaseService>

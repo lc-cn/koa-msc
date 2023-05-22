@@ -1,15 +1,16 @@
-import {controllers} from '@/controller'
+import {controllers} from 'koa-msc/controller'
 import {Rule, Rules} from 'async-validator'
-import {toLowercaseFirst} from "@/utils";
+import {toLowercaseFirst} from "koa-msc/utils";
 export function Controller(path:string,name?:string){
     return (target)=>{
+        const ctrName=toLowercaseFirst(target.name.replace('Controller',''))
         name=name||toLowercaseFirst(target.name.replace('Controller',''))
         target.prototype.__ROUTE__={
             path,
-            name:name||toLowercaseFirst(target.name.replace('Controller',''))
+            name:name||ctrName
         }
         target.prototype.__METHODS__=methodsMap.get(target.prototype.constructor)
-        controllers.set(name,target)
+        controllers.set(ctrName,target)
         return target
     }
 }
@@ -25,7 +26,8 @@ export interface RouteConfig{
     name?:string
 }
 export interface MethodConfig{
-    name:string
+    funcName:string
+    name?:string
     path:string
     method:Request[]
     desc?:string
@@ -34,23 +36,23 @@ export interface MethodConfig{
     body?:Rules
 }
 export function RequestMapping(path:string,method:Request|Request[]){
-    return (target, name, descriptor)=> {
-        const methodConfig=getMethod(target,name)
-        methodConfig.name=name
+    return (target, funcName, descriptor)=> {
+        const methodConfig=getMethod(target,funcName)
+        if(!methodConfig.name) methodConfig.name=funcName
         methodConfig.path=path
         methodConfig.method=[].concat(method)
         return descriptor;
     };
 }
-function getMethod(target,name:string){
+function getMethod(target,funcName:string){
     let methods=methodsMap.get(target.constructor);
     if(!methods){
         methods=[] as MethodConfig[]
         methodsMap.set(target.constructor,methods)
     }
-    let methodConfig=methods.find(c=>c.name===name)
+    let methodConfig=methods.find(c=>c.funcName===funcName)
     if(!methodConfig){
-        methodConfig={name,method:[],path:''}
+        methodConfig={funcName,method:[],path:''}
         methods.push(methodConfig)
     }
     return methodConfig
@@ -63,17 +65,17 @@ export function Param(key:string,value:Rule){
         return descriptor
     }
 }
-export function Tag(tag:string){
+export function Tag(...tags:string[]){
     return (target,name,descriptor)=>{
         const methodConfig=getMethod(target,name)
-        const tags=methodConfig.tags||=[]
-        if(!tags.includes(tag))tags.push(tag)
+        methodConfig.tags=tags
         return descriptor
     }
 }
-export function Describe(desc:string){
-    return (target,name,descriptor)=>{
-        const methodConfig=getMethod(target,name)
+export function Describe(name:string,desc?:string){
+    return (target,name2,descriptor)=>{
+        const methodConfig=getMethod(target,name2)
+        methodConfig.name=name
         methodConfig.desc=desc
         return descriptor
     }

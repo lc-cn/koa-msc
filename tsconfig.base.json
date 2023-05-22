@@ -10,8 +10,8 @@
     "moduleResolution": "node",
     "strictBindCallApply": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@": ["./src"]
+      "koa-msc/*": ["./src/*"],
+      "koa-msc": ["./src"]
     }
   },
   "include": [

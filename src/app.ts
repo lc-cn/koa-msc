@@ -163,6 +163,7 @@ export class App extends Koa {
                 name: methodConfig.name,
                 desc: methodConfig.desc,
                 tags: methodConfig.tags || [],
+                group: routeConfig.name,
                 path,
                 methods: methodConfig.method,
                 query: methodConfig.query,
@@ -190,7 +191,7 @@ export class App extends Koa {
                         await schema.validate(ctx.request['body'] || {}).catch(e => err = e)
                         if (err) throw err
                     }
-                    const result = await this.controllers[name as string][methodConfig.name](queryObj, ctx.request['body'], ctx)
+                    const result = await this.controllers[name as string][methodConfig.funcName](queryObj, ctx.request['body'], ctx)
                     if (result) ctx.body = result
                 })
             }
@@ -356,6 +357,7 @@ export namespace App {
         name: string
         path: string
         methods: Request[]
+        group?: string
         desc?: string
         tags?: string[]
         query: Rules
