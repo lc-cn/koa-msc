@@ -22,6 +22,8 @@ export class BaseService<M extends object=object>{
     public model:ModelStatic<SModel<M>>
     public models:App.Models
     public sequelize:Sequelize
+    constructor(public app:App){
+    }
     async transaction():Promise<Transaction>
     transaction<T extends TransactionCallback=TransactionCallback>(callback:T):Result<T>
     async transaction(callback?:TransactionCallback):Promise<Transaction|any>{

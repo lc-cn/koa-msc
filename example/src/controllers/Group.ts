@@ -34,7 +34,10 @@ export class GroupController extends BaseController<GroupService>{
     async info({id}:Pick<Group, 'id'>){
         return await this.service.info({id},{
             rejectOnEmpty:true,
-            include:this.service.models.user
+            include:{
+                model:this.service.models.user,
+                attributes:['id','name']
+            }
         })
     }
     @RequestMapping('/remove',Request.get)

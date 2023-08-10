@@ -9,14 +9,14 @@ import {Logger, getLogger} from "log4js";
 import {
     BelongsToManyOptions,
     ModelAttributes,
-    Options as DataBaseConfig,
+    Options as SequelizeConfig,
     Sequelize
 } from "sequelize";
 import {ListenOptions} from "net";
 import {Class, deepClone, deepMerge, getIpAddress, toLowercaseFirst} from "./utils";
 import {
     ColumnsConfig,
-    columnsKey, isGetter,
+    columnsKey, dbNameKey, isGetter,
     MethodConfig,
     Relations,
     relationsKey,
@@ -39,15 +39,18 @@ export class App extends Koa {
     private tableConfig: Record<string, ColumnsConfig> = {}
     public router: Router
     public httpServer: Server
-    public sequelize: Sequelize
+    public db:App.DbList
     static baseDir: string
     public apis: App.Api[] = []
-
+    get sequelize() {
+        return this.db.default
+    }
     constructor(config: App.Config) {
         super(config.koa)
         App.baseDir = process.cwd()
         this.httpServer = createServer(this.callback())
         this.config = deepMerge(deepClone(App.defaultConfig) as App.Config, config)
+        this.db = new App.DbList(this)
         if(this.config.transaction) {
             const namespace=cls.createNamespace(typeof this.config.transaction==='string'?this.config.transaction:'koa-msc')
             Sequelize.useCLS(namespace)
@@ -70,21 +73,23 @@ export class App extends Koa {
         this.initControllers()
     }
 
-    extend(name: string, config: ColumnsConfig) {
-        if (!this.tableConfig[name]) return this.define(name, config)
+    extend(name: string, config: ColumnsConfig,dbName:string='$default') {
+        name=`${dbName}.${name}`
+        if (!this.tableConfig[name]) return this.define(name, config,dbName)
         Object.assign(this.tableConfig[name], config)
         return this
     }
 
-    define(name: string, config: ColumnsConfig) {
-        if (this.tableConfig[name]) return this.extend(name, config)
+    define(name: string, config: ColumnsConfig,dbName:string='$default') {
+        name=`${dbName}.${name}`
+        if (this.tableConfig[name]) return this.extend(name, config,dbName)
         this.tableConfig[name] = config
         return this
     }
 
     createDataBasePool() {
         this.logger.info('正在创建数据库连接...')
-        this.sequelize = new Sequelize(this.config.sequelize)
+        this.db.init()
     }
 
     addHook<K extends keyof SequelizeHooks>(type: K, name: string, fn: SequelizeHooks[K])
@@ -123,7 +128,7 @@ export class App extends Koa {
         this.logger.info('正在扫描Models配置')
         const tableConfigs = this.load(this.config.model_path, "models")
         for (const [name, Table] of tableConfigs) {
-            this.define(toLowercaseFirst(name.replace('Model', '')), Reflect.get(Table, columnsKey))
+            this.define(toLowercaseFirst(name.replace('Model', '')), Reflect.get(Table, columnsKey),Reflect.get(Table, dbNameKey))
         }
     }
 
@@ -144,7 +149,7 @@ export class App extends Koa {
     initServices() {
         this.logger.info('正在扫描并创建Services')
         for (const [name, Service] of this.load(this.config.service_path, 'services')) {
-            this.addService(name.replace('Service', ''), new Service())
+            this.addService(name.replace('Service', ''), new Service(this))
         }
     }
 
@@ -263,60 +268,62 @@ export class App extends Koa {
             if (config.references) {
                 relateModel.push({name, config})// 关联表先跳过，避免循环依赖问题
             } else {
-                this.sequelize.define(name, config as unknown as ModelAttributes, {timestamps: false})
+                const [dbName,tableName] = name.split('.')
+                const db=dbName==='$default'?this.sequelize:this.db.get(dbName)
+                db.define(tableName, config as unknown as ModelAttributes, {timestamps: false})
             }
         }
         // 创建关联表
         for (const {name, config} of relateModel) {
+            const [dbName,tableName] = name.split('.')
+            const db=dbName==='$default'?this.sequelize:this.db.get(dbName)
             Object.keys(config).forEach(key => {
                 if (config[key].references) {
                     const model = config[key].references
                     if (typeof model !== "string" && isGetter(model.model)) {
                         const modelName: string = toLowercaseFirst(model.model().name.replace('Model', ''))
-                        model.model = this.model(modelName)
+                        model.model = db.model(modelName)
+                        if(!model.model) throw new Error(`未找到模型${modelName} 请确认关联模型存在于同一数据库`)
                     }
                 }
             })
-            this.sequelize.define(name, config as unknown as ModelAttributes, {timestamps: false})
+            db.define(tableName, config as unknown as ModelAttributes, {timestamps: false})
         }
         this.logger.info('根据Model配置构建模型关联关系...')
         // 根据表关系配置生成模型关系
         for (const [name, table] of models) {
+            const dbName=Reflect.get(table.prototype.constructor, dbNameKey)
+            const db=dbName?this.db.get(dbName):this.sequelize
             const relations: Relations = Reflect.get(table.prototype.constructor, relationsKey)
             if (!relations) continue
             // 建立 一对一 关系
             for (const relation of relations.hasOne) {
                 const targetName = [...models.keys()].find(key => models.get(key) === relation.getter())
-                this.model(name).hasOne(this.model(targetName), relation.options)
+                db.model(name).hasOne(db.model(targetName), relation.options)
             }
             // 建立 一对多 关系
             for (const relation of relations.hasMany) {
                 const targetName = [...models.keys()].find(key => models.get(key) === relation.getter())
-                this.model(name).hasMany(this.model(targetName), relation.options)
+                db.model(name).hasMany(db.model(targetName), relation.options)
             }
             // 建立 多对一 关系
             for (const relation of relations.belongsTo) {
                 const targetName = [...models.keys()].find(key => models.get(key) === relation.getter())
-                this.model(name).belongsTo(this.model(targetName), relation.options)
+                db.model(name).belongsTo(db.model(targetName), relation.options)
             }
             // 建立 多对多 关系
             for (const relation of relations.belongsToMany) {
                 const targetName = [...models.keys()].find(key => models.get(key) === relation.getter())
                 if (relation.options.through && isGetter(relation.options.through)) {
                     const modelName: string = toLowercaseFirst(relation.options.through().name.replace('Model', ''))
-                    relation.options.through = this.model(modelName)
+                    relation.options.through = db.model(modelName)
                 }
-                this.model(name).belongsToMany(this.model(targetName), relation.options as unknown as BelongsToManyOptions)
+                db.model(name).belongsToMany(db.model(targetName), relation.options as unknown as BelongsToManyOptions)
             }
         }
         this.logger.info('正在同步数据库Models')
-        await this.sequelize.sync({
-            alter: {
-                drop: false
-            }
-        }).catch(e => {
-            this.logger.error(e)
-        })
+        // 同步数据库
+        await this.db.sync()
         this.logger.info('挂载Model到对应Service....')
         // 把模型挂到服务上去，不然用不了
         for (const name in this.services) {
@@ -356,6 +363,42 @@ export namespace App {
     export interface Models extends Record<string,BaseModel> {
 
     }
+    export class DbList extends Map<string,Sequelize>{
+        private readonly configs:DbConfig[]
+        constructor(private app:App){
+            super()
+            this.configs = [].concat(this.app.config.db_config||this.app.config.sequelize||[])
+        }
+        get default(){
+            const defaultDbName = this.configs.find(config => config.isDefault)?.name
+            if(!defaultDbName){
+                if(this.size===0) throw new Error('未配置默认数据库')
+                if(this.size===1) return this.values().next().value as Sequelize
+            }
+            return this.get(defaultDbName)
+        }
+        init(){
+            const dbConfigs:DbConfig[]=this.configs
+            for(const config of dbConfigs){
+                const {name=[config.dialect,config.dialect].join(':'),...rest}=config
+                if(this.has(name)) throw new Error(`数据库${name}已存在`)
+                const sequelize = new Sequelize(rest)
+                this.set(name, sequelize)
+            }
+        }
+        async sync(){
+            for(const [name,sequelize] of this){
+                this.app.logger.info(`正在同步数据库${name}...`)
+                await sequelize.sync({
+                    alter: {
+                        drop: false
+                    }
+                }).catch(e => {
+                    this.app.logger.error(e)
+                })
+            }
+        }
+    }
     export interface Api {
         name: string
         path: string
@@ -372,10 +415,13 @@ export namespace App {
         models: BaseModel
         services: ServiceConstruct
     }
-
+    export interface DbConfig extends SequelizeConfig{
+        name?:string
+        isDefault?:boolean
+    }
     export type LoadResult<T extends keyof ResultMap> = ResultMap[T]
     export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal" | "mark" | "off"
-
+    type MayBeArray<T> = T | T[]
     export interface Config {
         log_level?: LogLevel
         // 是否自动使用事务,传string时表示事务命名空间名称(传boolean时为'koa-msc')
@@ -386,6 +432,11 @@ export namespace App {
         deep_scan?: boolean
         koa?: KoaOptions
         router?: RouterOptions
-        sequelize: DataBaseConfig
+        /**
+         * deprecated
+         * use db_config instead
+         * */
+        sequelize?: SequelizeConfig
+        db_config?: MayBeArray<DbConfig>
     }
 }

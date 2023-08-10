@@ -37,6 +37,7 @@ export function Model(name){
     }
 }
 export const relationsKey=Symbol('relations')
+export const dbNameKey=Symbol('dbName')
 export const columnsKey=Symbol('columns')
 export interface Relation<O> {
     getter:Getter,
@@ -93,6 +94,12 @@ const defaultRelation:Relations={
     hasMany:[],
     hasOne:[],
     belongsToMany:[]
+}
+export function Db(name:string){
+    return (target)=>{
+        Reflect.set(target,dbNameKey,name)
+        return target
+    }
 }
 export function ForeignKey(getter:Getter,key:string='id'){
     return (target,name)=>{

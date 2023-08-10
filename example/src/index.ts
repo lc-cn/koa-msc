@@ -10,7 +10,8 @@ const app=new App({
     router:{
         prefix:'/api'
     },
-    sequelize:{
+    db_config:{
+        isDefault:true,
         dialect:'sqlite',
         storage:path.resolve(process.cwd(),'database.sqlite'),
         database:'test',
