@@ -8,7 +8,7 @@ import * as fs from 'fs'
 import {Logger, getLogger} from "log4js";
 import {
     BelongsToManyOptions,
-    ModelAttributes,
+    ModelAttributes, ModelOptions,
     Options as SequelizeConfig,
     Sequelize
 } from "sequelize";
@@ -17,11 +17,11 @@ import {Class, deepClone, deepMerge, getIpAddress, toLowercaseFirst} from "./uti
 import {
     ColumnsConfig,
     columnsKey, dbNameKey, isGetter,
-    MethodConfig,
+    MethodConfig, optionsKey,
     Relations,
     relationsKey,
     Request,
-    RouteConfig
+    RouteConfig, TableConfig
 } from "./decorators";
 import {Router, RouterOptions} from "./router";
 import {models, BaseModel} from "./model";
@@ -36,7 +36,7 @@ export class App extends Koa {
     public logger: Logger
     public services: App.Services={}
     public controllers: Record<string, ControllerConstruct> = {}
-    private tableConfig: Record<string, ColumnsConfig> = {}
+    private tableConfig: Record<string, TableConfig> = {}
     public router: Router
     public httpServer: Server
     public db:App.DbList
@@ -73,14 +73,14 @@ export class App extends Koa {
         this.initControllers()
     }
 
-    extend(name: string, config: ColumnsConfig,dbName:string='$default') {
+    extend(name: string, config: TableConfig,dbName:string='$default') {
         name=`${dbName}.${name}`
         if (!this.tableConfig[name]) return this.define(name, config,dbName)
         Object.assign(this.tableConfig[name], config)
         return this
     }
 
-    define(name: string, config: ColumnsConfig,dbName:string='$default') {
+    define(name: string, config: TableConfig,dbName:string='$default') {
         name=`${dbName}.${name}`
         if (this.tableConfig[name]) return this.extend(name, config,dbName)
         this.tableConfig[name] = config
@@ -128,7 +128,10 @@ export class App extends Koa {
         this.logger.info('正在扫描Models配置')
         const tableConfigs = this.load(this.config.model_path, "models")
         for (const [name, Table] of tableConfigs) {
-            this.define(toLowercaseFirst(name.replace('Model', '')), Reflect.get(Table, columnsKey),Reflect.get(Table, dbNameKey))
+            this.define(toLowercaseFirst(name.replace('Model', '')), {
+                columns:Reflect.get(Table, columnsKey),
+                ...Reflect.get(Table, optionsKey)
+            },Reflect.get(Table, dbNameKey))
         }
     }
 
@@ -263,14 +266,23 @@ export class App extends Koa {
 
         this.logger.info('根据Model配置创建模型...')
         // 通过sequelize定义模型
-        const relateModel: { name: string, config: ColumnsConfig }[] = []
-        for (const [name, config] of Object.entries(this.tableConfig)) {
-            if (config.references) {
-                relateModel.push({name, config})// 关联表先跳过，避免循环依赖问题
+        const relateModel: { name: string, config: TableConfig }[] = []
+        for (const [name, {columns,...config}] of Object.entries(this.tableConfig)) {
+            if (Object.values(columns).some(column=>column.references)) {
+                relateModel.push({name, config:{
+                        ...config,
+                        columns,
+                    }})// 关联表先跳过，避免循环依赖问题
             } else {
                 const [dbName,tableName] = name.split('.')
                 const db=dbName==='$default'?this.sequelize:this.db.get(dbName)
-                db.define(tableName, config as unknown as ModelAttributes, {timestamps: false})
+                const options:ModelOptions={
+                    ...config,
+                    timestamps:!!config.timestamps,
+                    createdAt:typeof config.timestamps==='object'?config.timestamps.createdAt:true,
+                    updatedAt:typeof config.timestamps==='object'?config.timestamps.updatedAt:true,
+                }
+                db.define(tableName, columns as unknown as ModelAttributes, options)
             }
         }
         // 创建关联表
@@ -287,7 +299,7 @@ export class App extends Koa {
                     }
                 }
             })
-            db.define(tableName, config as unknown as ModelAttributes, {timestamps: false})
+            db.define(tableName, config.columns as unknown as ModelAttributes, {timestamps: false})
         }
         this.logger.info('根据Model配置构建模型关联关系...')
         // 根据表关系配置生成模型关系

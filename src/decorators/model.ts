@@ -8,7 +8,7 @@ import {
     HasManyOptions,
     HasOneOptions, ManyToManyOptions, ModelStatic,
 } from "sequelize";
-import {deepClone, toLowercaseFirst} from "koa-msc/utils";
+import {Class, deepClone, toLowercaseFirst} from "koa-msc/utils";
 import {ModelAttributeColumnReferencesOptions} from "sequelize/types/model";
 import {ForeignKeyOptions} from "sequelize/types/associations/base";
 import {ThroughOptions} from "sequelize/types/associations/belongs-to-many";
@@ -38,6 +38,7 @@ export function Model(name){
 }
 export const relationsKey=Symbol('relations')
 export const dbNameKey=Symbol('dbName')
+export const optionsKey=Symbol('options')
 export const columnsKey=Symbol('columns')
 export interface Relation<O> {
     getter:Getter,
@@ -81,6 +82,10 @@ export type ColumnDesc=DataType|{
 
     set?(value: unknown): void
 }
+export interface TableConfig{
+    columns:ColumnsConfig
+    timestamps?:boolean|{createdAt:string|boolean,updatedAt:string|boolean}
+}
 export interface ColumnsConfig{
     [key:string]:ColumnConfig
 }
@@ -123,7 +128,22 @@ export function HasOne(getter:Getter,options?:HasOneOptions){
         })
     }
 }
-
+export function Timestamps(options?:boolean|{createdAt:string|boolean,updatedAt:string|boolean}):ClassDecorator
+export function Timestamps<T extends Class>(target:T):T
+export function Timestamps<T extends Class>(input:T|boolean|{createdAt:string|boolean,updatedAt:string|boolean}){
+    const options:TableConfig['timestamps']=typeof input==='boolean'?input:input===undefined||typeof input==='function'?true:input
+    const target:Class=typeof input==='function'?input:undefined
+    if(target){
+        const tableConfig:TableConfig=get(target,optionsKey,{columns:{}})
+        tableConfig.timestamps=options
+        return target
+    }
+    return (target)=>{
+        const tableConfig:TableConfig=get(target,optionsKey,{columns:{}})
+        tableConfig.timestamps=options
+        return target
+    }
+}
 export function HasMany(getter:Getter,options?:HasManyOptions){
     return (target)=>{
         const relations:Relations=get(target,relationsKey,deepClone(defaultRelation))
