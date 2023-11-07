@@ -14,9 +14,9 @@
     ],
     "paths": {
       "@/*": ["src/*"],
-      "koa-msc": ["../src"],
-      "koa-msc/*": ["../src/*"]
-    },
+      "koa-msc": ["../core/src"],
+      "koa-msc/*": ["../core/src/*"]
+    }
   },
   "include": ["./src/"]
 }

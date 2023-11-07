@@ -1,10 +1,11 @@
 {
-  "name": "koa-msc-example",
+  "name": "msc-example",
   "version": "1.0.0",
   "description": "koa-msc 使用样例",
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "start": "ts-node -r tsconfig-paths/register ./src/index.ts",
     "dev": "ts-node-dev -r tsconfig-paths/register ./src/index.ts",
     "pub": "npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -31,6 +32,7 @@
     "/lib/**/LICENSE"
   ],
   "dependencies": {
+    "koa-msc": "^1.2.29",
     "sqlite3": "^5.1.6"
   }
 }

@@ -1,17 +1,19 @@
 {
-  "name": "koa-msc",
-  "version": "1.2.28",
+  "name": "msc_workspace",
+  "private": true,
+  "version": "0.0.1",
   "description": "一个使用装饰器开发后端API的框架",
   "main": "lib/index.js",
   "scripts": {
-    "compile": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "build": "npm run compile && dtsc --project tsconfig.dtsc.json",
-    "dev": "npm run dev -w example",
-    "pub": "npm publish --access public",
+    "start": "npm start -w msc-example",
+    "compile": "npm run compile -w koa-msc",
+    "build": "npm run build -w koa-msc",
+    "dev": "npm run dev -w msc-example",
+    "pub": "npm run pub -w koa-msc",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "workspaces": [
-    "example"
+    "packages/*"
   ],
   "repository": {
     "type": "git",
@@ -44,15 +46,5 @@
     "/lib/**/*.js",
     "/lib/**/*.d.ts",
     "/lib/**/LICENSE"
-  ],
-  "dependencies": {
-    "@koa/router": "^10.1.1",
-    "async-validator": "^4.2.5",
-    "cls-hooked": "^4.2.2",
-    "koa": "^2.13.4",
-    "koa-bodyparser": "^4.3.0",
-    "log4js": "^6.5.2",
-    "sequelize": "^6.31.0",
-    "ws": "^8.8.0"
-  }
+  ]
 }

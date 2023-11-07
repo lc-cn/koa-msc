@@ -10,11 +10,11 @@
     "moduleResolution": "node",
     "strictBindCallApply": true,
     "paths": {
-      "koa-msc/*": ["./src/*"],
-      "koa-msc": ["./src"]
+      "koa-msc/*": ["./packages/core/src/*"],
+      "koa-msc": ["./packages/core/src"]
     }
   },
   "include": [
-    "src"
+    "packages/core/src",
   ]
 }
