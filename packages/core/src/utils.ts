@@ -14,7 +14,7 @@ export function deepMerge<T extends any>(base:T, ...from:T[]):T{
         for(const key in item){
             if(base.hasOwnProperty(key)){
                 if(typeof base[key]==='object'){
-                    base[key]=deepMerge(base[key],item[key])
+                    base[key]=deepMerge(base[key] as any,item[key] as any)
                 }else{
                     base[key]=item[key]
                 }
