@@ -41,16 +41,16 @@ npm i ibm_db # DB2
 ```typescript
 import {App} from 'koa-msc'
 const app=new App({
-    controller_path:'src/controllers',// 相对于启动目录
-    service_path:'src/services',// 相对于启动目录
-    model_path:'src/models',// 相对于启动目录
+    controller_path:'src/controllers',// 存储控制器的路径，相对于启动目录
+    service_path:'src/services',// 存储服务的路径，相对于启动目录
+    model_path:'src/models',// 存储表模型的路径，相对于启动目录
     transaction: true, // 是否启用事务
     log_level:'info', // 日志等级
     router:{ // KoaRouter初始化配置 参见 https://github.com/koajs/router/blob/master/API.md#new-routeropts
         prefix:'/api'
     },
     sequelzie:{ // Sequelize初始化配置 参见 https://www.sequelize.cn/core-concepts/getting-started
-        dialect:'sqlite', 
+        dialect:'sqlite', // 数据库驱动名称
         storage:path.resolve(process.cwd(),'database.sqlite'),
         database:'test',
         logging(msg){
@@ -67,7 +67,7 @@ mkdir controllers
 mkdir services
 mkdir models
 ```
-## 6.在对应文件夹新建`User.ts`，并编写相关代码
+## 6.在功能对应的文件夹新建`User.ts`，并编写相关代码
 1. src/models/User.ts
 
 ```typescript
@@ -92,7 +92,7 @@ import {ModelStatic,Model} from "sequelize";
 import {UserModel} from '../models/User'
 
 @Service
-export class UserService extends BaseService<UserService>{
+export class UserService extends BaseService<UserModel>{
 }
 ```
 3. src/controllers/User.ts
@@ -102,7 +102,7 @@ import {Controller,BaseController, RequestMapping, Request} from 'koa-msc'
 import {UserService} from '../services/User'
 
 @Controller('/hello')
-export class UserController extends BaseController<UserController> {
+export class UserController extends BaseController<UserService> {
     @RequestMapping('list', Request.get)
     getUserList(ctx) {
         return this.service.list()
@@ -121,9 +121,9 @@ export class UserController extends BaseController<UserController> {
   // ... 其他配置
   scripts: {
     // ... 其他命令
-    start: "node ./lib/index.js",// 依赖 ts-node 需自行安装该依赖,执行前需先npm run build
+    start: "node ./lib/index.js",// 执行前需先npm run build
     build: "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",// 依赖typescript和tsc-alias，需自行安装依赖
-    dev: "ts-node-dev -r tsconfig-paths/register ./src/index.ts", // 依赖 ts-node-dev和ts-config-paths 需自行安装该依赖
+    dev: "ts-node-dev -r tsconfig-paths/register ./src/index.ts", // 依赖 ts-node-dev和tsconfig-paths 需自行安装该依赖
     // ... 其他命令
   },
   // ... 其他配置
