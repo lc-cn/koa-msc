@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "outDir": "lib",
+    "declaration": false,
+    "experimentalDecorators": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "koa-msc/*": ["./packages/core/src/*"],
+      "koa-msc": ["./packages/core/src"]
+    }
+  },
+  "include": [
+    "./src",
+    "packages/core/src"
+  ]
+}

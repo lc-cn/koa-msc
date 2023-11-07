@@ -36,6 +36,7 @@
     "@types/koa__router": "^8.0.11",
     "@types/node": "latest",
     "@types/ws": "^8.5.3",
+    "@vercel/node": "^3.0.7",
     "dtsc": "^2.2.3",
     "ts-node-dev": "latest",
     "tsc-alias": "latest",

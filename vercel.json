@@ -1,0 +1,12 @@
+{
+    "builds": [
+        {
+            "src": "run build -w koa-msc",
+            "use": "npm"
+        },
+        {
+            "src": "./example/lib/index.js",
+            "use": "@vercel/node"
+        }
+    ]
+}

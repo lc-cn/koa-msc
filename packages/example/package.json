@@ -4,7 +4,7 @@
   "description": "koa-msc 使用样例",
   "main": "lib/index.js",
   "scripts": {
-    "build": "tsc --project tsconfig.json && tsc-alias -p tsconfig.json",
+    "build": "tsc --project tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "ts-node -r tsconfig-paths/register ./src/index.ts",
     "dev": "ts-node-dev -r tsconfig-paths/register ./src/index.ts",
     "pub": "npm publish --access public",
